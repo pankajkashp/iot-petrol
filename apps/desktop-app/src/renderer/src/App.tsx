@@ -20,6 +20,16 @@ export default function App() {
 
   return (
     <AppShell>
+      <header className="topbar">
+        <div className="topbar-title">
+          <strong>Fuel Station Operations</strong>
+          <span>Live local monitoring and device control</span>
+        </div>
+        <div className="topbar-meta">
+          <span>Local-first</span>
+          <span className="status-pill tone-dispensing">System online</span>
+        </div>
+      </header>
       <Page />
     </AppShell>
   );

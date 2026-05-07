@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:web": "turbo run dev --filter=@fuel/web-dashboard",
+    "preview:web": "turbo run build --filter=@fuel/web-dashboard && npm --workspace=@fuel/web-dashboard run preview",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

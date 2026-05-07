@@ -17,6 +17,15 @@ export interface PumpCardModel {
 interface DashboardState {
   activePage: "dashboard" | "pumps" | "devices" | "settings";
   pumps: PumpCardModel[];
+  readings: Array<{
+    id: string;
+    pumpId: string;
+    fuelType: "petrol" | "diesel" | "cng";
+    status: PumpStatus;
+    liters: number;
+    revenue: number;
+    createdAt: string;
+  }>;
   logs: Array<{
     id: string;
     pumpId: string;
@@ -26,6 +35,7 @@ interface DashboardState {
   }>;
   stats: {
     totalPumps: number;
+    activePumps: number;
     onlinePumps: number;
     totalLiters: number;
     totalRevenue: number;
@@ -33,6 +43,7 @@ interface DashboardState {
   setActivePage: (page: DashboardState["activePage"]) => void;
   setOverview: (overview: {
     pumps: PumpCardModel[];
+    readings: DashboardState["readings"];
     logs: DashboardState["logs"];
     stats: DashboardState["stats"];
   }) => void;
@@ -41,9 +52,11 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>((set) => ({
   activePage: "dashboard",
   pumps: [],
+  readings: [],
   logs: [],
   stats: {
     totalPumps: 0,
+    activePumps: 0,
     onlinePumps: 0,
     totalLiters: 0,
     totalRevenue: 0

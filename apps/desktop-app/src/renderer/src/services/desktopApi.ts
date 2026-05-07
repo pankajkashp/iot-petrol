@@ -1,5 +1,6 @@
 import type {
   DesktopApi,
+  DeviceEventModel,
   DeviceLogModel,
   OverviewModel,
   PumpModel,
@@ -30,6 +31,7 @@ const createInitialOverview = (): OverviewModel => {
     logs: [],
     stats: {
       totalPumps: pumps.length,
+      activePumps: 0,
       onlinePumps: pumps.length,
       totalLiters: 0,
       totalRevenue: 0
@@ -41,12 +43,14 @@ let mockDesktopApi: DesktopApi | null = null;
 
 const createMockDesktopApi = (): DesktopApi => {
   const state = createInitialOverview();
-  const listeners = new Set<(payload: unknown) => void>();
+  const listeners = new Set<(event: DeviceEventModel) => void>();
 
   const tick = () => {
     const now = new Date().toISOString();
     const nextReading = state.pumps.map((pump, index) => {
-      const status = statuses[(Date.now() / 1000 + index) % statuses.length | 0] ?? "idle";
+      const cycle = Math.floor(Date.now() / 1000) + index;
+      const isOnline = cycle % 13 !== 0;
+      const status = isOnline ? statuses[cycle % statuses.length] ?? "idle" : "offline";
       const delta = status === "dispensing" ? 4 + Math.random() * 11 : Math.random() * 0.6;
       const liters = Number((pump.liters + delta).toFixed(2));
       const revenue = Number((liters * pump.pricePerLiter).toFixed(2));
@@ -68,6 +72,61 @@ const createMockDesktopApi = (): DesktopApi => {
         createdAt: now
       };
 
+      if (!isOnline) {
+        listeners.forEach((listener) =>
+          listener({
+            type: "device:offline",
+            pumpId: pump.id,
+            timestamp: now,
+            payload: { name: pump.name }
+          })
+        );
+      } else if (pump.status === "offline") {
+        listeners.forEach((listener) =>
+          listener({
+            type: "device:online",
+            pumpId: pump.id,
+            timestamp: now,
+            payload: { name: pump.name }
+          })
+        );
+      }
+
+      if (pump.status !== "dispensing" && status === "dispensing") {
+        listeners.forEach((listener) =>
+          listener({
+            type: "pump:started",
+            pumpId: pump.id,
+            timestamp: now,
+            payload: { fuelType: pump.fuelType }
+          })
+        );
+      }
+
+      if (pump.status === "dispensing" && status === "idle") {
+        listeners.forEach((listener) =>
+          listener({
+            type: "pump:stopped",
+            pumpId: pump.id,
+            timestamp: now,
+            payload: { fuelType: pump.fuelType }
+          })
+        );
+      }
+
+      listeners.forEach((listener) =>
+        listener({
+          type: "pump:reading",
+          pumpId: pump.id,
+          timestamp: now,
+          payload: {
+            liters,
+            revenue,
+            status
+          }
+        })
+      );
+
       state.logs.unshift({
         id: crypto.randomUUID(),
         pumpId: pump.id,
@@ -84,14 +143,11 @@ const createMockDesktopApi = (): DesktopApi => {
     state.logs = state.logs.slice(0, 24);
     state.stats = {
       totalPumps: state.pumps.length,
+      activePumps: state.pumps.filter((pump) => pump.status === "dispensing").length,
       onlinePumps: state.pumps.filter((pump) => pump.status !== "offline").length,
       totalLiters: Number(state.readings.reduce((sum, reading) => sum + reading.liters, 0).toFixed(2)),
       totalRevenue: Number(state.readings.reduce((sum, reading) => sum + reading.revenue, 0).toFixed(2))
     };
-
-    for (const listener of listeners) {
-      listener({ overview: state });
-    }
   };
 
   const interval = setInterval(tick, 3000);
@@ -102,7 +158,7 @@ const createMockDesktopApi = (): DesktopApi => {
     getPumps: async () => state.pumps,
     getReadings: async () => state.readings,
     getLogs: async () => state.logs,
-    onReading: (callback) => {
+    onEvent: (callback) => {
       listeners.add(callback);
       return () => {
         listeners.delete(callback);

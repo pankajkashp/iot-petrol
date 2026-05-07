@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { PumpDeviceEvent } from "@fuel/device-core";
 import type { LocalDatabase } from "../main/services/LocalDatabase";
 
 type Overview = ReturnType<LocalDatabase["getOverview"]>;
@@ -9,15 +10,15 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getReadings: () =>
     ipcRenderer.invoke("desktop:get-readings") as Promise<Overview["readings"]>,
   getLogs: () => ipcRenderer.invoke("desktop:get-logs") as Promise<Overview["logs"]>,
-  onReading: (callback: (payload: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+  onEvent: (callback: (event: PumpDeviceEvent) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: PumpDeviceEvent) => {
       callback(payload);
     };
 
-    ipcRenderer.on("desktop:reading", handler);
+    ipcRenderer.on("desktop:event", handler);
 
     return () => {
-      ipcRenderer.removeListener("desktop:reading", handler);
+      ipcRenderer.removeListener("desktop:event", handler);
     };
   }
 });

@@ -12,6 +12,14 @@ export interface PumpRow {
   lastReadingAt: string | null;
 }
 
+export interface OverviewStats {
+  totalPumps: number;
+  activePumps: number;
+  onlinePumps: number;
+  totalLiters: number;
+  totalRevenue: number;
+}
+
 export interface DeviceLogRow {
   id: string;
   pumpId: string;

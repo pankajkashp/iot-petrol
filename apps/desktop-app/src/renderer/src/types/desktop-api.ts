@@ -36,10 +36,24 @@ export interface OverviewModel {
   logs: DeviceLogModel[];
   stats: {
     totalPumps: number;
+    activePumps: number;
     onlinePumps: number;
     totalLiters: number;
     totalRevenue: number;
   };
+}
+
+export interface DeviceEventModel {
+  type:
+    | "pump:started"
+    | "pump:stopped"
+    | "pump:reading"
+    | "device:online"
+    | "device:offline"
+    | "device:error";
+  pumpId: string;
+  timestamp: string;
+  payload?: Record<string, unknown>;
 }
 
 export interface DesktopApi {
@@ -47,5 +61,5 @@ export interface DesktopApi {
   getPumps: () => Promise<PumpModel[]>;
   getReadings: () => Promise<ReadingModel[]>;
   getLogs: () => Promise<DeviceLogModel[]>;
-  onReading: (callback: (payload: unknown) => void) => () => void;
+  onEvent: (callback: (event: DeviceEventModel) => void) => () => void;
 }

@@ -1,68 +1,137 @@
 import { EventEmitter } from "node:events";
-import type { PumpDevice } from "@fuel/device-core";
-import type { LocalDatabase } from "./LocalDatabase";
-import { PumpSimulatorService } from "./PumpSimulatorService";
-import type { PumpRow } from "../types";
+import type {
+  DeviceLogRow,
+  OverviewStats,
+  PumpRow,
+  ReadingRow
+} from "../types";
+import { LocalDatabase } from "./LocalDatabase";
+import { PumpSimulatorProcess, type PumpSimulatorTickPayload } from "./PumpSimulatorProcess";
+import type { PumpDeviceEvent } from "@fuel/device-core";
 
-type PumpReadingEvent = {
-  pumpId: string;
-  reading: Awaited<ReturnType<PumpDevice["getReading"]>>;
-  overview: ReturnType<LocalDatabase["getOverview"]>;
-};
+export type DeviceManagerEvent =
+  | { type: "overview"; overview: ReturnType<LocalDatabase["getOverview"]> }
+  | { type: "reading"; payload: PumpSimulatorTickPayload }
+  | { type: "event"; event: PumpDeviceEvent };
 
 export class DeviceManager extends EventEmitter {
-  private devices = new Map<string, PumpDevice>();
-  private pollingTimer: NodeJS.Timeout | null = null;
-  private readonly simulator = new PumpSimulatorService();
+  private simulator: PumpSimulatorProcess | null = null;
+  private started = false;
 
   constructor(private readonly database: LocalDatabase) {
     super();
   }
 
   async start() {
-    const pumps = this.database.getPumps();
-
-    for (const pump of pumps) {
-      this.devices.set(pump.id, this.simulator.createDevice(this.toSimulatorConfig(pump)));
+    if (this.started) {
+      return;
     }
 
-    for (const device of this.devices.values()) {
-      await device.connect();
-    }
-
-    await this.pollOnce();
-    this.pollingTimer = setInterval(() => {
-      void this.pollOnce();
-    }, 3000);
+    this.simulator = new PumpSimulatorProcess(this.database.getPumps());
+    this.simulator.on("event", (event: PumpDeviceEvent) => {
+      this.handleDeviceEvent(event);
+      this.emit("event", event);
+    });
+    this.simulator.on("reading", (payload: PumpSimulatorTickPayload) => {
+      this.handleReading(payload);
+      this.emit("reading", payload);
+    });
+    this.simulator.start();
+    this.started = true;
+    this.emitOverview();
   }
 
   stop() {
-    if (this.pollingTimer) {
-      clearInterval(this.pollingTimer);
-      this.pollingTimer = null;
-    }
-  }
-
-  async pollOnce() {
-    for (const [pumpId, device] of this.devices.entries()) {
-      const reading = await device.getReading();
-      this.database.saveReading(reading);
-      const overview = this.database.getOverview();
-      this.emit("reading", { pumpId, reading, overview } satisfies PumpReadingEvent);
-    }
+    this.simulator?.stop();
+    this.simulator = null;
+    this.started = false;
   }
 
   getOverview() {
     return this.database.getOverview();
   }
 
-  private toSimulatorConfig(pump: PumpRow) {
-    return {
-      pumpId: pump.id,
-      pumpName: pump.name,
-      nozzle: pump.nozzle,
-      fuelType: pump.fuelType,
-      pricePerLiter: pump.pricePerLiter
+  private handleReading({ pumpId, pump, reading }: PumpSimulatorTickPayload) {
+    if (!reading) {
+      return;
+    }
+
+    this.database.saveReading(reading);
+    this.database.savePumpState({
+      id: pumpId,
+      status: pump.status,
+      liters: pump.liters,
+      revenue: pump.revenue,
+      lastReadingAt: pump.lastReadingAt
+    });
+
+    this.emitOverview();
+  }
+
+  private handleDeviceEvent(event: PumpDeviceEvent) {
+    const messageMap: Record<PumpDeviceEvent["type"], string> = {
+      "pump:started": "Pump started dispensing",
+      "pump:stopped": "Pump stopped dispensing",
+      "pump:reading": "Pump reading updated",
+      "device:online": "Device came online",
+      "device:offline": "Device went offline",
+      "device:error": "Device error reported"
     };
+
+    const level = event.type === "device:error" ? "error" : event.type === "device:offline" ? "warn" : "info";
+
+    this.database.saveDeviceLog({
+      id: crypto.randomUUID(),
+      pumpId: event.pumpId,
+      message: messageMap[event.type],
+      level,
+      createdAt: event.timestamp
+    });
+
+    if (event.type === "device:offline") {
+      this.database.savePumpState({
+        id: event.pumpId,
+        status: "offline",
+        liters: this.getPumpById(event.pumpId)?.liters ?? 0,
+        revenue: this.getPumpById(event.pumpId)?.revenue ?? 0,
+        lastReadingAt: event.timestamp
+      });
+    }
+
+    if (event.type === "device:online") {
+      const pump = this.getPumpById(event.pumpId);
+      if (pump) {
+        this.database.savePumpState({
+          id: pump.id,
+          status: "idle",
+          liters: pump.liters,
+          revenue: pump.revenue,
+          lastReadingAt: event.timestamp
+        });
+      }
+    }
+
+    if (event.type === "pump:started" || event.type === "pump:stopped") {
+      const pump = this.getPumpById(event.pumpId);
+      if (pump) {
+        this.database.savePumpState({
+          id: pump.id,
+          status: event.type === "pump:started" ? "dispensing" : "idle",
+          liters: pump.liters,
+          revenue: pump.revenue,
+          lastReadingAt: event.timestamp
+        });
+      }
+    }
+
+    this.emitOverview();
+  }
+
+  private getPumpById(pumpId: string): PumpRow | undefined {
+    return this.database.getPumps().find((pump) => pump.id === pumpId);
+  }
+
+  private emitOverview() {
+    this.emit("overview", this.database.getOverview());
   }
 }

@@ -12,7 +12,7 @@ export function useDashboardBootstrap() {
     const load = async () => {
       const overview = await api.getOverview();
       setOverview(overview);
-      unsubscribe = api.onReading(async () => {
+      unsubscribe = api.onEvent(async () => {
         const refreshed = await api.getOverview();
         setOverview(refreshed);
       });

@@ -30,3 +30,18 @@ export interface PumpDeviceConfig {
   fuelType: PumpReading["fuelType"];
   pricePerLiter: number;
 }
+
+export type PumpDeviceEventType =
+  | "pump:started"
+  | "pump:stopped"
+  | "pump:reading"
+  | "device:online"
+  | "device:offline"
+  | "device:error";
+
+export interface PumpDeviceEvent {
+  type: PumpDeviceEventType;
+  pumpId: string;
+  timestamp: string;
+  payload?: Record<string, unknown>;
+}

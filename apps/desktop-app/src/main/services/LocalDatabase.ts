@@ -132,6 +132,21 @@ export class LocalDatabase {
       .all(limit) as DeviceLogRow[];
   }
 
+  savePumpState(pump: Pick<PumpRow, "id" | "status" | "liters" | "revenue" | "lastReadingAt">) {
+    this.db
+      .prepare(
+        `
+      UPDATE pumps
+      SET status = @status,
+          liters = @liters,
+          revenue = @revenue,
+          lastReadingAt = @lastReadingAt
+      WHERE id = @id
+    `
+      )
+      .run(pump);
+  }
+
   saveReading(reading: ReadingRow) {
     const updatePump = this.db.prepare(`
       UPDATE pumps
@@ -169,12 +184,24 @@ export class LocalDatabase {
     tx();
   }
 
+  saveDeviceLog(log: DeviceLogRow) {
+    this.db
+      .prepare(
+        `
+      INSERT INTO device_logs (id, pumpId, message, level, createdAt)
+      VALUES (@id, @pumpId, @message, @level, @createdAt)
+    `
+      )
+      .run(log);
+  }
+
   getOverview() {
     const pumps = this.getPumps();
     const readings = this.getReadings(50);
     const totalLiters = readings.reduce((sum, item) => sum + item.liters, 0);
     const totalRevenue = readings.reduce((sum, item) => sum + item.revenue, 0);
     const online = pumps.filter((pump) => pump.status !== "offline").length;
+    const active = pumps.filter((pump) => pump.status === "dispensing").length;
 
     return {
       pumps,
@@ -182,6 +209,7 @@ export class LocalDatabase {
       logs: this.getLogs(12),
       stats: {
         totalPumps: pumps.length,
+        activePumps: active,
         onlinePumps: online,
         totalLiters: Number(totalLiters.toFixed(2)),
         totalRevenue: Number(totalRevenue.toFixed(2))

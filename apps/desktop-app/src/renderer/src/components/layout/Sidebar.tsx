@@ -13,9 +13,12 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div>
-        <p className="eyebrow">Fuel Operations</p>
+      <div className="sidebar-brand">
+        <p className="eyebrow">Station Console</p>
         <h1 className="brand">Dispatcher</h1>
+        <p className="sidebar-copy">
+          Daily operations for fuel stations, devices, billing, and offline-first syncing.
+        </p>
       </div>
       <nav className="nav">
         {items.map((item) => (
@@ -30,8 +33,14 @@ export function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <span>Offline-first desktop</span>
-        <span>SQLite local store</span>
+        <div>
+          <span className="footer-label">Mode</span>
+          <strong>Touchscreen ready</strong>
+        </div>
+        <div>
+          <span className="footer-label">Store</span>
+          <strong>SQLite local-first</strong>
+        </div>
       </div>
     </aside>
   );

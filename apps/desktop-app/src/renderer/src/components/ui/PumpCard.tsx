@@ -1,23 +1,20 @@
 import type { PumpCardModel } from "../../store/useDashboardStore";
-
-const statusTone: Record<PumpCardModel["status"], string> = {
-  idle: "tone-idle",
-  dispensing: "tone-dispensing",
-  offline: "tone-offline",
-  error: "tone-error"
-};
+import { StatusBadge } from "./StatusBadge";
 
 export function PumpCard({ pump }: { pump: PumpCardModel }) {
+  const statusLabel =
+    pump.status === "dispensing" ? "Online" : pump.status === "idle" ? "Online" : "Offline";
+
   return (
     <article className="pump-card">
       <div className="pump-card-top">
         <div>
           <p className="pump-name">{pump.name}</p>
           <p className="pump-subtitle">
-            {pump.nozzle} · {pump.fuelType.toUpperCase()}
+            {pump.nozzle} · {pump.fuelType.toUpperCase()} · {statusLabel}
           </p>
         </div>
-        <span className={`status-pill ${statusTone[pump.status]}`}>{pump.status}</span>
+        <StatusBadge status={pump.status} />
       </div>
       <div className="pump-grid">
         <div>
@@ -26,9 +23,12 @@ export function PumpCard({ pump }: { pump: PumpCardModel }) {
         </div>
         <div>
           <span>Revenue</span>
-          <strong>₹{pump.revenue.toFixed(2)}</strong>
+          <strong>₹{Math.round(pump.revenue).toLocaleString()}</strong>
         </div>
       </div>
+      <p className="pump-updated">
+        Updated {pump.lastReadingAt ? new Date(pump.lastReadingAt).toLocaleTimeString() : "just now"}
+      </p>
     </article>
   );
 }
