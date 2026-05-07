@@ -21,6 +21,7 @@ export function Sidebar() {
         {items.map((item) => (
           <button
             key={item.id}
+            type="button"
             className={activePage === item.id ? "nav-item active" : "nav-item"}
             onClick={() => setActivePage(item.id)}
           >
