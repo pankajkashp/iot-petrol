@@ -1,0 +1,12 @@
+{
+  "name": "@fuel/device-simulator",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"device-simulator dev placeholder\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"device-simulator lint placeholder\"",
+    "clean": "rm -rf dist"
+  }
+}

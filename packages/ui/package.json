@@ -1,0 +1,11 @@
+{
+  "name": "@fuel/ui",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"ui lint placeholder\"",
+    "clean": "rm -rf dist"
+  }
+}

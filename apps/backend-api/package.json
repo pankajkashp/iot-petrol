@@ -1,0 +1,13 @@
+{
+  "name": "@fuel/backend-api",
+  "private": true,
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "echo \"backend-api dev placeholder\"",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"backend-api lint placeholder\"",
+    "clean": "rm -rf dist"
+  }
+}

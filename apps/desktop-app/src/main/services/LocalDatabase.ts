@@ -1,0 +1,191 @@
+import path from "node:path";
+import fs from "node:fs";
+import Database from "better-sqlite3";
+import { app } from "electron";
+import type { DeviceLogRow, PumpRow, ReadingRow } from "../types";
+
+type DatabaseInstance = ReturnType<typeof Database>;
+
+export class LocalDatabase {
+  private db!: DatabaseInstance;
+
+  initialize() {
+    const dataDir = path.join(app.getPath("userData"), "fuel-local");
+    fs.mkdirSync(dataDir, { recursive: true });
+    this.db = new Database(path.join(dataDir, "desktop.sqlite"));
+    this.db.pragma("journal_mode = WAL");
+    this.createTables();
+    this.seedPumps();
+  }
+
+  private createTables() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS pumps (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        nozzle TEXT NOT NULL,
+        fuelType TEXT NOT NULL,
+        pricePerLiter REAL NOT NULL,
+        status TEXT NOT NULL,
+        liters REAL NOT NULL DEFAULT 0,
+        revenue REAL NOT NULL DEFAULT 0,
+        lastReadingAt TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS readings (
+        id TEXT PRIMARY KEY,
+        pumpId TEXT NOT NULL,
+        fuelType TEXT NOT NULL,
+        status TEXT NOT NULL,
+        liters REAL NOT NULL,
+        revenue REAL NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS device_logs (
+        id TEXT PRIMARY KEY,
+        pumpId TEXT NOT NULL,
+        message TEXT NOT NULL,
+        level TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+    `);
+  }
+
+  private seedPumps() {
+    const count = this.db.prepare("SELECT COUNT(*) as count FROM pumps").get() as { count: number };
+    if (count.count > 0) {
+      return;
+    }
+
+    const insert = this.db.prepare(`
+      INSERT INTO pumps (id, name, nozzle, fuelType, pricePerLiter, status, liters, revenue, lastReadingAt)
+      VALUES (@id, @name, @nozzle, @fuelType, @pricePerLiter, @status, @liters, @revenue, @lastReadingAt)
+    `);
+
+    const defaults: PumpRow[] = [
+      {
+        id: "pump-1",
+        name: "Pump A-01",
+        nozzle: "Nozzle 1",
+        fuelType: "diesel",
+        pricePerLiter: 92.75,
+        status: "idle",
+        liters: 0,
+        revenue: 0,
+        lastReadingAt: null
+      },
+      {
+        id: "pump-2",
+        name: "Pump A-02",
+        nozzle: "Nozzle 2",
+        fuelType: "petrol",
+        pricePerLiter: 108.25,
+        status: "idle",
+        liters: 0,
+        revenue: 0,
+        lastReadingAt: null
+      },
+      {
+        id: "pump-3",
+        name: "Pump B-01",
+        nozzle: "Nozzle 1",
+        fuelType: "cng",
+        pricePerLiter: 74.15,
+        status: "idle",
+        liters: 0,
+        revenue: 0,
+        lastReadingAt: null
+      },
+      {
+        id: "pump-4",
+        name: "Pump B-02",
+        nozzle: "Nozzle 2",
+        fuelType: "diesel",
+        pricePerLiter: 91.1,
+        status: "idle",
+        liters: 0,
+        revenue: 0,
+        lastReadingAt: null
+      }
+    ];
+
+    const transaction = this.db.transaction((rows: PumpRow[]) => {
+      rows.forEach((row) => insert.run(row));
+    });
+    transaction(defaults);
+  }
+
+  getPumps() {
+    return this.db.prepare("SELECT * FROM pumps ORDER BY name ASC").all() as PumpRow[];
+  }
+
+  getReadings(limit = 24) {
+    return this.db
+      .prepare("SELECT * FROM readings ORDER BY createdAt DESC LIMIT ?")
+      .all(limit) as ReadingRow[];
+  }
+
+  getLogs(limit = 24) {
+    return this.db
+      .prepare("SELECT * FROM device_logs ORDER BY createdAt DESC LIMIT ?")
+      .all(limit) as DeviceLogRow[];
+  }
+
+  saveReading(reading: ReadingRow) {
+    const updatePump = this.db.prepare(`
+      UPDATE pumps
+      SET status = @status,
+          liters = @liters,
+          revenue = @revenue,
+          lastReadingAt = @createdAt
+      WHERE id = @pumpId
+    `);
+
+    const insertReading = this.db.prepare(`
+      INSERT INTO readings (id, pumpId, fuelType, status, liters, revenue, createdAt)
+      VALUES (@id, @pumpId, @fuelType, @status, @liters, @revenue, @createdAt)
+    `);
+
+    const insertLog = this.db.prepare(`
+      INSERT INTO device_logs (id, pumpId, message, level, createdAt)
+      VALUES (@id, @pumpId, @message, @level, @createdAt)
+    `);
+
+    const logId = crypto.randomUUID();
+
+    const tx = this.db.transaction(() => {
+      insertReading.run(reading);
+      updatePump.run(reading);
+      insertLog.run({
+        id: logId,
+        pumpId: reading.pumpId,
+        message: `Stored ${reading.liters.toFixed(2)}L for ${reading.pumpId}`,
+        level: "info",
+        createdAt: reading.createdAt
+      });
+    });
+
+    tx();
+  }
+
+  getOverview() {
+    const pumps = this.getPumps();
+    const readings = this.getReadings(50);
+    const totalLiters = readings.reduce((sum, item) => sum + item.liters, 0);
+    const totalRevenue = readings.reduce((sum, item) => sum + item.revenue, 0);
+    const online = pumps.filter((pump) => pump.status !== "offline").length;
+
+    return {
+      pumps,
+      readings,
+      logs: this.getLogs(12),
+      stats: {
+        totalPumps: pumps.length,
+        onlinePumps: online,
+        totalLiters: Number(totalLiters.toFixed(2)),
+        totalRevenue: Number(totalRevenue.toFixed(2))
+      }
+    };
+  }
+}

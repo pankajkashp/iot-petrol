@@ -1,0 +1,11 @@
+{
+  "name": "@fuel/shared-types",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"shared-types lint placeholder\"",
+    "clean": "rm -rf dist"
+  }
+}
