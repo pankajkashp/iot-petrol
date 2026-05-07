@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src",
+    "rootDir": "../..",
     "outDir": "dist",
     "jsx": "react-jsx",
     "module": "ESNext",
@@ -14,23 +14,7 @@
   },
   "include": [
     "src",
-    "electron.vite.config.ts"
+    "../../packages/device-core/src"
   ],
-  "references": [
-    {
-      "path": "../../packages/shared-types"
-    },
-    {
-      "path": "../../packages/auth"
-    },
-    {
-      "path": "../../packages/ui"
-    },
-    {
-      "path": "../../packages/device-core"
-    },
-    {
-      "path": "../../packages/sync-engine"
-    }
-  ]
+  "references": []
 }
