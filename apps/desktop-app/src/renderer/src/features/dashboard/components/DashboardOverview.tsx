@@ -25,7 +25,7 @@ export function DashboardOverview() {
       <header className="page-header hero-header">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h2>Industrial fuel management control room</h2>
+          <h2>PumpCore Industrial Management Console</h2>
           <p className="page-copy">
             Real-time visibility into pump activity, device health, and local-first operations.
           </p>

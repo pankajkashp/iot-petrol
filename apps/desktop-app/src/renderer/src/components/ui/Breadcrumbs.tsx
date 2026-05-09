@@ -1,4 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
+import { BRANDING } from "../../config/brandingConfig";
 
 const routeMap: Record<string, string> = {
   dashboard: "Overview",
@@ -13,7 +14,7 @@ export function Breadcrumbs() {
 
   return (
     <nav className="breadcrumbs" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <strong>Fuel Station Operations</strong>
+      <strong style={{ color: "var(--blue)" }}>{BRANDING.name}</strong>
       <span style={{ color: "var(--subtle)", fontSize: "1.2rem", fontWeight: "300" }}>/</span>
       {pathnames.length === 0 ? (
         <span style={{ color: "var(--muted)", fontSize: "0.92rem" }}>Dashboard</span>

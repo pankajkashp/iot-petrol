@@ -18,7 +18,8 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 780,
-    backgroundColor: "#f5f7fb",
+    title: "PumpCore",
+    backgroundColor: "#F8FAFC",
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,

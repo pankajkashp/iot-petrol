@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useDashboardBootstrap } from "./hooks/useDashboardBootstrap";
 import { AppShell } from "./components/layout/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -8,10 +8,32 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { PumpDetailPage } from "./pages/PumpDetailPage";
 import { BackButton } from "./components/ui/BackButton";
 import { Breadcrumbs } from "./components/ui/Breadcrumbs";
+import { useDashboardStore } from "./store/useDashboardStore";
+import { Logo } from "./components/ui/Logo";
 
 export default function App() {
   useDashboardBootstrap();
-  const location = useLocation();
+  const isLoading = useDashboardStore((state) => state.isLoading);
+
+  if (isLoading) {
+    return (
+      <div 
+        style={{ 
+          height: "100vh", 
+          display: "flex", 
+          flexDirection: "column",
+          alignItems: "center", 
+          justifyContent: "center",
+          background: "#F8FAFC"
+        }}
+      >
+        <Logo size={80} />
+        <div style={{ marginTop: "24px", color: "var(--muted)", fontSize: "0.9rem" }}>
+          Initializing system modules...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AppShell>
@@ -35,7 +57,6 @@ export default function App() {
         <Route path="/pumps/:id" element={<PumpDetailPage />} />
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        {/* Fallback for invalid routes */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AppShell>

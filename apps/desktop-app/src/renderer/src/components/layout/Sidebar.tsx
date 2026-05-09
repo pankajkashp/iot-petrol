@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { Logo } from "../ui/Logo";
 
 const items = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard" },
@@ -11,10 +12,10 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <p className="eyebrow">Station Console</p>
-        <h1 className="brand">Dispatcher</h1>
+        <Logo size={36} />
+        <p className="eyebrow" style={{ marginTop: "16px" }}>Station Console</p>
         <p className="sidebar-copy">
-          Daily operations for fuel stations, devices, billing, and offline-first syncing.
+          Daily operations for fuel stations, devices, and local-first syncing.
         </p>
       </div>
       <nav className="nav">
