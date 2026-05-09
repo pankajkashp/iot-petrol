@@ -7,6 +7,8 @@ import { useDashboardStore } from "../../../store/useDashboardStore";
 import { PumpGrid } from "../../pumps";
 import { DeviceStatusPanel } from "../../devices";
 
+import { FuelPriceWidget } from "../../../components/ui/FuelPriceWidget";
+
 export function DashboardOverview() {
   const api = resolveDesktopApi();
   const pumps = useDashboardStore((state) => state.pumps);
@@ -71,6 +73,10 @@ export function DashboardOverview() {
 
         <SectionCard title="Device Status" subtitle="Connectivity overview">
           <DeviceStatusPanel pumps={pumps} />
+        </SectionCard>
+
+        <SectionCard title="Fuel Market" subtitle="Real-time city pricing">
+          <FuelPriceWidget />
         </SectionCard>
 
         <SectionCard title="Recent Activity" subtitle="Latest device events">

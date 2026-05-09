@@ -1,6 +1,7 @@
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
 import { DeviceManager } from "@fuel/device-core";
+import { FuelPriceService, MockFuelPriceProvider } from "@fuel/billing-engine";
 import { LocalDatabase } from "./services/LocalDatabase";
 import { createDeviceMap } from "./services/deviceFactory";
 import { registerIpc } from "./ipc";
@@ -9,6 +10,7 @@ let mainWindow: BrowserWindow | null = null;
 
 const database = new LocalDatabase();
 let deviceManager: DeviceManager | null = null;
+let fuelPriceService: FuelPriceService | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -34,13 +36,19 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   database.initialize();
+  
   const deviceMap = createDeviceMap(await database.getPumps());
   deviceManager = new DeviceManager({
     repository: database,
     devices: deviceMap
   });
 
-  registerIpc(deviceManager);
+  fuelPriceService = new FuelPriceService(
+    new MockFuelPriceProvider(),
+    database
+  );
+
+  registerIpc(deviceManager, fuelPriceService);
   createWindow();
   await deviceManager.start();
 });

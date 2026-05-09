@@ -162,6 +162,22 @@ const createMockDesktopApi = (): DesktopApi => {
       return () => {
         listeners.delete(callback);
       };
+    },
+    getFuelPrices: async (city) => {
+      return [
+        { fuelType: "petrol", price: 108.25, city, provider: "Mock", updatedAt: new Date().toISOString() },
+        { fuelType: "diesel", price: 92.75, city, provider: "Mock", updatedAt: new Date().toISOString() },
+        { fuelType: "cng", price: 74.15, city, provider: "Mock", updatedAt: new Date().toISOString() },
+      ];
+    },
+    getFuelHistory: async (fuelType, city) => {
+      return Array.from({ length: 5 }).map((_, i) => ({
+        fuelType,
+        price: 100 + Math.random() * 10,
+        city,
+        provider: "Mock",
+        updatedAt: new Date(Date.now() - i * 86400000).toISOString()
+      }));
     }
   };
 };

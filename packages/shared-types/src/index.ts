@@ -1,9 +1,10 @@
 export type PumpStatus = "idle" | "dispensing" | "offline" | "error";
+export type FuelType = "petrol" | "diesel" | "cng";
 
 export interface PumpReading {
   id: string;
   pumpId: string;
-  fuelType: "petrol" | "diesel" | "cng";
+  fuelType: FuelType;
   status: PumpStatus;
   liters: number;
   revenue: number;
@@ -20,7 +21,7 @@ export interface PumpDeviceStatus {
 export interface PumpDeviceConfig {
   pumpId: string;
   pumpName: string;
-  fuelType: PumpReading["fuelType"];
+  fuelType: FuelType;
   pricePerLiter: number;
 }
 
@@ -51,4 +52,21 @@ export interface DeviceLog {
   message: string;
   level: "info" | "warn" | "error";
   createdAt: string;
+}
+
+// Fuel Price Types
+export interface FuelPrice {
+  fuelType: FuelType;
+  price: number;
+  city: string;
+  provider: string;
+  updatedAt: string;
+}
+
+export interface FuelPriceUpdate {
+  city: string;
+  prices: Array<{
+    fuelType: FuelType;
+    price: number;
+  }>;
 }

@@ -7,7 +7,9 @@ import type {
   DeviceOverview,
   DeviceRepository,
   PumpDefinition,
-  PumpReading
+  PumpReading,
+  FuelPrice,
+  FuelType
 } from "@fuel/device-core";
 
 type DatabaseInstance = ReturnType<typeof Database>;
@@ -54,6 +56,26 @@ export class LocalDatabase implements DeviceRepository {
         message TEXT NOT NULL,
         level TEXT NOT NULL,
         createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS fuel_prices (
+        fuelType TEXT NOT NULL,
+        city TEXT NOT NULL,
+        price REAL NOT NULL,
+        provider TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0,
+        PRIMARY KEY (fuelType, city)
+      );
+
+      CREATE TABLE IF NOT EXISTS fuel_price_history (
+        id TEXT PRIMARY KEY,
+        fuelType TEXT NOT NULL,
+        city TEXT NOT NULL,
+        price REAL NOT NULL,
+        provider TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0
       );
     `);
   }
@@ -148,13 +170,13 @@ export class LocalDatabase implements DeviceRepository {
     }));
   }
 
-  private getReadings(limit = 24) {
+  async getReadings(limit = 24) {
     return this.db
       .prepare("SELECT * FROM readings ORDER BY createdAt DESC LIMIT ?")
       .all(limit) as PumpReading[];
   }
 
-  private getLogs(limit = 24) {
+  async getLogs(limit = 24) {
     return this.db
       .prepare("SELECT * FROM device_logs ORDER BY createdAt DESC LIMIT ?")
       .all(limit) as DeviceLog[];
@@ -245,5 +267,44 @@ export class LocalDatabase implements DeviceRepository {
         totalRevenue: Number(totalRevenue.toFixed(2))
       }
     };
+  }
+
+  async getPrices(city: string): Promise<FuelPrice[]> {
+    const rows = this.db
+      .prepare("SELECT * FROM fuel_prices WHERE city = ?")
+      .all(city) as FuelPrice[];
+    return rows;
+  }
+
+  async savePrices(prices: FuelPrice[]): Promise<void> {
+    const insertPrice = this.db.prepare(`
+      INSERT OR REPLACE INTO fuel_prices (fuelType, city, price, provider, updatedAt)
+      VALUES (@fuelType, @city, @price, @provider, @updatedAt)
+    `);
+
+    const insertHistory = this.db.prepare(`
+      INSERT INTO fuel_price_history (id, fuelType, city, price, provider, createdAt)
+      VALUES (@id, @fuelType, @city, @price, @provider, @updatedAt)
+    `);
+
+    const tx = this.db.transaction(() => {
+      prices.forEach((p) => {
+        insertPrice.run(p);
+        insertHistory.run({
+          ...p,
+          id: crypto.randomUUID()
+        });
+      });
+    });
+
+    tx();
+  }
+
+  async getPriceHistory(fuelType: FuelType, city: string, limit = 10): Promise<FuelPrice[]> {
+    return this.db
+      .prepare(
+        "SELECT * FROM fuel_price_history WHERE fuelType = ? AND city = ? ORDER BY createdAt DESC LIMIT ?"
+      )
+      .all(fuelType, city, limit) as FuelPrice[];
   }
 }

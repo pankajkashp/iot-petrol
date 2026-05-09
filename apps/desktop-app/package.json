@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "main": "./out/main/index.js",
   "dependencies": {
+    "@fuel/billing-engine": "^0.1.0",
     "@fuel/device-core": "*",
     "@fuel/shared-types": "*",
     "better-sqlite3": "^11.9.1",
