@@ -4,14 +4,15 @@
   "version": "0.1.0",
   "main": "./out/main/index.js",
   "dependencies": {
+    "@fuel/device-core": "*",
+    "@fuel/shared-types": "*",
     "better-sqlite3": "^11.9.1",
     "electron": "^34.0.0",
     "electron-vite": "^3.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^5.0.2",
-    "@fuel/shared-types": "*",
-    "@fuel/device-core": "*"
+    "react-router-dom": "^7.15.0",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

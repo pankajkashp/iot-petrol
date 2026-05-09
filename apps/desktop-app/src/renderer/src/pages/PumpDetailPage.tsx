@@ -1,22 +1,23 @@
+import { useParams, useNavigate } from "react-router-dom";
 import { useDashboardStore } from "../store/useDashboardStore";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { SectionCard } from "../components/ui/SectionCard";
 
 export function PumpDetailPage() {
-  const selectedPumpId = useDashboardStore((state) => state.selectedPumpId);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const pumps = useDashboardStore((state) => state.pumps);
   const readings = useDashboardStore((state) => state.readings);
-  const setSelectedPumpId = useDashboardStore((state) => state.setSelectedPumpId);
 
-  const pump = pumps.find((p) => p.pumpId === selectedPumpId);
-  const pumpReadings = readings.filter((r) => r.pumpId === selectedPumpId).slice(0, 10);
+  const pump = pumps.find((p) => p.pumpId === id);
+  const pumpReadings = readings.filter((r) => r.pumpId === id).slice(0, 10);
 
   if (!pump) {
     return (
       <div className="page">
         <header className="page-header">
           <h2>Pump Not Found</h2>
-          <button type="button" className="ghost-button" onClick={() => setSelectedPumpId(null)}>
+          <button type="button" className="ghost-button" onClick={() => navigate("/pumps")}>
             Back to Pumps
           </button>
         </header>
@@ -34,9 +35,6 @@ export function PumpDetailPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <button type="button" className="ghost-button" onClick={() => setSelectedPumpId(null)}>
-            Back to Pumps
-          </button>
           <div className="hero-status">
             <span className="hero-status-label">Operational Status</span>
             <StatusBadge status={pump.status} />

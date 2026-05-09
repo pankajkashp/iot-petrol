@@ -1,16 +1,13 @@
-import { useDashboardStore } from "../../store/useDashboardStore";
+import { NavLink } from "react-router-dom";
 
 const items = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "pumps", label: "Pumps" },
-  { id: "devices", label: "Devices" },
-  { id: "settings", label: "Settings" }
+  { id: "dashboard", label: "Dashboard", path: "/dashboard" },
+  { id: "pumps", label: "Pumps", path: "/pumps" },
+  { id: "devices", label: "Devices", path: "/devices" },
+  { id: "settings", label: "Settings", path: "/settings" }
 ] as const;
 
 export function Sidebar() {
-  const activePage = useDashboardStore((state) => state.activePage);
-  const setActivePage = useDashboardStore((state) => state.setActivePage);
-
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -22,14 +19,14 @@ export function Sidebar() {
       </div>
       <nav className="nav">
         {items.map((item) => (
-          <button
+          <NavLink
             key={item.id}
-            type="button"
-            className={activePage === item.id ? "nav-item active" : "nav-item"}
-            onClick={() => setActivePage(item.id)}
+            to={item.path}
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+            style={{ textDecoration: "none", display: "flex", alignItems: "center" }}
           >
             {item.label}
-          </button>
+          </NavLink>
         ))}
       </nav>
       <div className="sidebar-footer">

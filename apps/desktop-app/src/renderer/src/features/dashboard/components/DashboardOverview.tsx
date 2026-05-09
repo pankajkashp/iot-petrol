@@ -13,7 +13,6 @@ export function DashboardOverview() {
   const readings = useDashboardStore((state) => state.readings);
   const logs = useDashboardStore((state) => state.logs);
   const stats = useDashboardStore((state) => state.stats);
-  const setSelectedPumpId = useDashboardStore((state) => state.setSelectedPumpId);
 
   const activePumps = stats.activePumps || pumps.filter((pump) => pump.status === "dispensing").length;
   const fuelToday = readings.reduce((sum, reading) => sum + reading.liters, 0);
@@ -66,7 +65,6 @@ export function DashboardOverview() {
         <SectionCard title="Pump Cards" subtitle="Live pump readings" className="span-2">
           <PumpGrid
             pumps={pumps}
-            onDetails={setSelectedPumpId}
             onToggleSensorFeed={(pumpId) => void api.toggleSensorFeed(pumpId)}
           />
         </SectionCard>

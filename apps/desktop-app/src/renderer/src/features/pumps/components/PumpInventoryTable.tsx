@@ -1,8 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { useDashboardStore } from "../../../store/useDashboardStore";
 
 export function PumpInventoryTable() {
   const pumps = useDashboardStore((state) => state.pumps);
-  const setSelectedPumpId = useDashboardStore((state) => state.setSelectedPumpId);
+  const navigate = useNavigate();
 
   return (
     <div className="table-card">
@@ -11,7 +12,7 @@ export function PumpInventoryTable() {
           className="table-row" 
           key={pump.pumpId} 
           style={{ cursor: 'pointer' }} 
-          onClick={() => setSelectedPumpId(pump.pumpId)}
+          onClick={() => navigate(`/pumps/${pump.pumpId}`)}
         >
           <div>
             <strong>{pump.pumpName}</strong>

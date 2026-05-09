@@ -3,12 +3,10 @@ import { PumpCard } from "../../../components/ui/PumpCard";
 
 export function PumpGrid({
   pumps,
-  onToggleSensorFeed,
-  onDetails
+  onToggleSensorFeed
 }: {
   pumps: PumpCardModel[];
   onToggleSensorFeed: (pumpId: string) => void;
-  onDetails: (pumpId: string) => void;
 }) {
   return (
     <div className="pump-grid-layout">
@@ -16,7 +14,6 @@ export function PumpGrid({
         <PumpCard
           key={pump.pumpId}
           pump={pump}
-          onDetails={onDetails}
           onRecordReading={(pumpId) => onToggleSensorFeed(pumpId)}
         />
       ))}
