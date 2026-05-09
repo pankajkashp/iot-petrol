@@ -9,5 +9,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"device-core lint placeholder\"",
     "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@fuel/shared-types": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
   }
 }

@@ -1,19 +1,10 @@
-import type {
-  DesktopApi,
-  DeviceEventModel,
-  DeviceLogModel,
-  OverviewModel,
-  PumpModel,
-  PumpStatus,
-  ReadingModel
-} from "../types/desktop-api";
+import type { DeviceEventModel, DesktopApi, DeviceLogModel, OverviewModel, PumpModel, ReadingModel } from "../types/desktop-api";
 
 const fuelTypes = ["petrol", "diesel", "cng"] as const;
-const statuses: PumpStatus[] = ["idle", "dispensing", "idle", "idle"];
 
 const createMockPump = (index: number): PumpModel => ({
-  id: `mock-pump-${index + 1}`,
-  name: `Pump ${String.fromCharCode(65 + index)}-${String(index + 1).padStart(2, "0")}`,
+  pumpId: `mock-pump-${index + 1}`,
+  pumpName: `Pump ${String.fromCharCode(65 + index)}-${String(index + 1).padStart(2, "0")}`,
   nozzle: `Nozzle ${index + 1}`,
   fuelType: fuelTypes[index % fuelTypes.length]!,
   pricePerLiter: [108.25, 92.75, 74.15, 91.1][index % 4]!,
@@ -44,120 +35,128 @@ let mockDesktopApi: DesktopApi | null = null;
 const createMockDesktopApi = (): DesktopApi => {
   const state = createInitialOverview();
   const listeners = new Set<(event: DeviceEventModel) => void>();
+  const sensorTimers = new Map<string, ReturnType<typeof setInterval>>();
 
-  const tick = () => {
-    const now = new Date().toISOString();
-    const nextReading = state.pumps.map((pump, index) => {
-      const cycle = Math.floor(Date.now() / 1000) + index;
-      const isOnline = cycle % 13 !== 0;
-      const status = isOnline ? statuses[cycle % statuses.length] ?? "idle" : "offline";
-      const delta = status === "dispensing" ? 4 + Math.random() * 11 : Math.random() * 0.6;
-      const liters = Number((pump.liters + delta).toFixed(2));
-      const revenue = Number((liters * pump.pricePerLiter).toFixed(2));
-      const updatedPump: PumpModel = {
-        ...pump,
-        status,
-        liters,
-        revenue,
-        lastReadingAt: now
-      };
-
-      const reading: ReadingModel = {
-        id: crypto.randomUUID(),
-        pumpId: pump.id,
-        fuelType: pump.fuelType,
-        status,
-        liters,
-        revenue,
-        createdAt: now
-      };
-
-      if (!isOnline) {
-        listeners.forEach((listener) =>
-          listener({
-            type: "device:offline",
-            pumpId: pump.id,
-            timestamp: now,
-            payload: { name: pump.name }
-          })
-        );
-      } else if (pump.status === "offline") {
-        listeners.forEach((listener) =>
-          listener({
-            type: "device:online",
-            pumpId: pump.id,
-            timestamp: now,
-            payload: { name: pump.name }
-          })
-        );
-      }
-
-      if (pump.status !== "dispensing" && status === "dispensing") {
-        listeners.forEach((listener) =>
-          listener({
-            type: "pump:started",
-            pumpId: pump.id,
-            timestamp: now,
-            payload: { fuelType: pump.fuelType }
-          })
-        );
-      }
-
-      if (pump.status === "dispensing" && status === "idle") {
-        listeners.forEach((listener) =>
-          listener({
-            type: "pump:stopped",
-            pumpId: pump.id,
-            timestamp: now,
-            payload: { fuelType: pump.fuelType }
-          })
-        );
-      }
-
-      listeners.forEach((listener) =>
-        listener({
-          type: "pump:reading",
-          pumpId: pump.id,
-          timestamp: now,
-          payload: {
-            liters,
-            revenue,
-            status
-          }
-        })
-      );
-
-      state.logs.unshift({
-        id: crypto.randomUUID(),
-        pumpId: pump.id,
-        message: `${pump.name} reported ${liters.toFixed(2)}L`,
-        level: "info",
-        createdAt: now
-      });
-
-      return { updatedPump, reading };
-    });
-
-    state.pumps = nextReading.map((item) => item.updatedPump);
-    state.readings = [...nextReading.map((item) => item.reading), ...state.readings].slice(0, 24);
-    state.logs = state.logs.slice(0, 24);
+  const recomputeStats = () => {
     state.stats = {
       totalPumps: state.pumps.length,
-      activePumps: state.pumps.filter((pump) => pump.status === "dispensing").length,
-      onlinePumps: state.pumps.filter((pump) => pump.status !== "offline").length,
-      totalLiters: Number(state.readings.reduce((sum, reading) => sum + reading.liters, 0).toFixed(2)),
-      totalRevenue: Number(state.readings.reduce((sum, reading) => sum + reading.revenue, 0).toFixed(2))
+      activePumps: state.pumps.filter((item) => item.status === "dispensing").length,
+      onlinePumps: state.pumps.filter((item) => item.status !== "offline").length,
+      totalLiters: Number(state.readings.reduce((sum, item) => sum + item.liters, 0).toFixed(2)),
+      totalRevenue: Number(state.readings.reduce((sum, item) => sum + item.revenue, 0).toFixed(2))
     };
   };
 
-  const interval = setInterval(tick, 3000);
-  void interval;
+  const pushReading = (pump: PumpModel, delta: number, now: string) => {
+    pump.lastReadingAt = now;
+
+    const reading: ReadingModel = {
+      id: crypto.randomUUID(),
+      pumpId: pump.pumpId,
+      fuelType: pump.fuelType,
+      status: pump.status,
+      liters: pump.liters,
+      revenue: pump.revenue,
+      createdAt: now
+    };
+
+    state.readings = [reading, ...state.readings].slice(0, 24);
+    state.logs = [
+      {
+        id: crypto.randomUUID(),
+        pumpId: pump.pumpId,
+        message: `${pump.pumpName} sensor reading: ${pump.liters.toFixed(2)}L`,
+        level: "info" as const,
+        createdAt: now
+      },
+      ...state.logs
+    ].slice(0, 24);
+
+    recomputeStats();
+
+    listeners.forEach((listener) =>
+      listener({
+        type: "FLOW_UPDATED",
+        pumpId: pump.pumpId,
+        timestamp: now,
+        payload: { liters: pump.liters, revenue: pump.revenue, status: pump.status, delta }
+      })
+    );
+  };
 
   return {
     getOverview: async () => state,
     getPumps: async () => state.pumps,
     getReadings: async () => state.readings,
     getLogs: async () => state.logs,
+    toggleSensorFeed: async (pumpId: string) => {
+      const pump = state.pumps.find((item) => item.pumpId === pumpId);
+      if (!pump) {
+        return;
+      }
+
+      const activeTimer = sensorTimers.get(pumpId);
+      const now = new Date().toISOString();
+
+      if (activeTimer) {
+        clearInterval(activeTimer);
+        sensorTimers.delete(pumpId);
+        pump.status = "idle";
+        state.logs = [
+          {
+            id: crypto.randomUUID(),
+            pumpId: pump.pumpId,
+            message: `${pump.pumpName} sensor stopped`,
+            level: "info" as const,
+            createdAt: now
+          },
+          ...state.logs
+        ].slice(0, 24);
+        recomputeStats();
+        listeners.forEach((listener) =>
+          listener({
+            type: "PUMP_STOPPED",
+            pumpId: pump.pumpId,
+            timestamp: now,
+            payload: { fuelType: pump.fuelType }
+          })
+        );
+        return;
+      }
+
+      const startedAt = new Date().toISOString();
+      pump.status = "dispensing";
+      state.logs = [
+        {
+          id: crypto.randomUUID(),
+          pumpId: pump.pumpId,
+          message: `${pump.pumpName} sensor started`,
+          level: "info" as const,
+          createdAt: startedAt
+        },
+        ...state.logs
+      ].slice(0, 24);
+      recomputeStats();
+      listeners.forEach((listener) =>
+        listener({
+          type: "PUMP_STARTED",
+          pumpId: pump.pumpId,
+          timestamp: startedAt,
+          payload: { fuelType: pump.fuelType }
+        })
+      );
+
+      const tick = () => {
+        const delta = Number((1.5 + Math.random() * 8.5).toFixed(2));
+        pump.liters = Number((pump.liters + delta).toFixed(2));
+        pump.revenue = Number((pump.revenue + delta * pump.pricePerLiter).toFixed(2));
+        pushReading(pump, delta, new Date().toISOString());
+      };
+
+      tick();
+      const timer = setInterval(tick, 2500);
+      sensorTimers.set(pumpId, timer);
+    },
     onEvent: (callback) => {
       listeners.add(callback);
       return () => {

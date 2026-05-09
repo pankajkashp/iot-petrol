@@ -2,11 +2,17 @@ import path from "node:path";
 import fs from "node:fs";
 import Database from "better-sqlite3";
 import { app } from "electron";
-import type { DeviceLogRow, PumpRow, ReadingRow } from "../types";
+import type {
+  DeviceLog,
+  DeviceOverview,
+  DeviceRepository,
+  PumpDefinition,
+  PumpReading
+} from "@fuel/device-core";
 
 type DatabaseInstance = ReturnType<typeof Database>;
 
-export class LocalDatabase {
+export class LocalDatabase implements DeviceRepository {
   private db!: DatabaseInstance;
 
   initialize() {
@@ -60,13 +66,13 @@ export class LocalDatabase {
 
     const insert = this.db.prepare(`
       INSERT INTO pumps (id, name, nozzle, fuelType, pricePerLiter, status, liters, revenue, lastReadingAt)
-      VALUES (@id, @name, @nozzle, @fuelType, @pricePerLiter, @status, @liters, @revenue, @lastReadingAt)
+      VALUES (@pumpId, @pumpName, @nozzle, @fuelType, @pricePerLiter, @status, @liters, @revenue, @lastReadingAt)
     `);
 
-    const defaults: PumpRow[] = [
+    const defaults: PumpDefinition[] = [
       {
-        id: "pump-1",
-        name: "Pump A-01",
+        pumpId: "pump-1",
+        pumpName: "Pump A-01",
         nozzle: "Nozzle 1",
         fuelType: "diesel",
         pricePerLiter: 92.75,
@@ -76,8 +82,8 @@ export class LocalDatabase {
         lastReadingAt: null
       },
       {
-        id: "pump-2",
-        name: "Pump A-02",
+        pumpId: "pump-2",
+        pumpName: "Pump A-02",
         nozzle: "Nozzle 2",
         fuelType: "petrol",
         pricePerLiter: 108.25,
@@ -87,8 +93,8 @@ export class LocalDatabase {
         lastReadingAt: null
       },
       {
-        id: "pump-3",
-        name: "Pump B-01",
+        pumpId: "pump-3",
+        pumpName: "Pump B-01",
         nozzle: "Nozzle 1",
         fuelType: "cng",
         pricePerLiter: 74.15,
@@ -98,8 +104,8 @@ export class LocalDatabase {
         lastReadingAt: null
       },
       {
-        id: "pump-4",
-        name: "Pump B-02",
+        pumpId: "pump-4",
+        pumpName: "Pump B-02",
         nozzle: "Nozzle 2",
         fuelType: "diesel",
         pricePerLiter: 91.1,
@@ -110,29 +116,53 @@ export class LocalDatabase {
       }
     ];
 
-    const transaction = this.db.transaction((rows: PumpRow[]) => {
+    const transaction = this.db.transaction((rows: PumpDefinition[]) => {
       rows.forEach((row) => insert.run(row));
     });
     transaction(defaults);
   }
 
-  getPumps() {
-    return this.db.prepare("SELECT * FROM pumps ORDER BY name ASC").all() as PumpRow[];
+  async getPumps() {
+    const rows = this.db.prepare("SELECT * FROM pumps ORDER BY name ASC").all() as Array<{
+      id: string;
+      name: string;
+      nozzle: string;
+      fuelType: PumpDefinition["fuelType"];
+      pricePerLiter: number;
+      status: PumpDefinition["status"];
+      liters: number;
+      revenue: number;
+      lastReadingAt: string | null;
+    }>;
+
+    return rows.map((row) => ({
+      pumpId: row.id,
+      pumpName: row.name,
+      nozzle: row.nozzle,
+      fuelType: row.fuelType,
+      pricePerLiter: row.pricePerLiter,
+      status: row.status,
+      liters: row.liters,
+      revenue: row.revenue,
+      lastReadingAt: row.lastReadingAt
+    }));
   }
 
-  getReadings(limit = 24) {
+  private getReadings(limit = 24) {
     return this.db
       .prepare("SELECT * FROM readings ORDER BY createdAt DESC LIMIT ?")
-      .all(limit) as ReadingRow[];
+      .all(limit) as PumpReading[];
   }
 
-  getLogs(limit = 24) {
+  private getLogs(limit = 24) {
     return this.db
       .prepare("SELECT * FROM device_logs ORDER BY createdAt DESC LIMIT ?")
-      .all(limit) as DeviceLogRow[];
+      .all(limit) as DeviceLog[];
   }
 
-  savePumpState(pump: Pick<PumpRow, "id" | "status" | "liters" | "revenue" | "lastReadingAt">) {
+  async savePumpState(
+    pump: Pick<PumpDefinition, "pumpId" | "status" | "liters" | "revenue" | "lastReadingAt">
+  ) {
     this.db
       .prepare(
         `
@@ -141,13 +171,13 @@ export class LocalDatabase {
           liters = @liters,
           revenue = @revenue,
           lastReadingAt = @lastReadingAt
-      WHERE id = @id
+      WHERE id = @pumpId
     `
       )
       .run(pump);
   }
 
-  saveReading(reading: ReadingRow) {
+  async saveReading(reading: PumpReading) {
     const updatePump = this.db.prepare(`
       UPDATE pumps
       SET status = @status,
@@ -184,7 +214,7 @@ export class LocalDatabase {
     tx();
   }
 
-  saveDeviceLog(log: DeviceLogRow) {
+  async saveDeviceLog(log: DeviceLog) {
     this.db
       .prepare(
         `
@@ -195,8 +225,8 @@ export class LocalDatabase {
       .run(log);
   }
 
-  getOverview() {
-    const pumps = this.getPumps();
+  async getOverview(): Promise<DeviceOverview> {
+    const pumps = await this.getPumps();
     const readings = this.getReadings(50);
     const totalLiters = readings.reduce((sum, item) => sum + item.liters, 0);
     const totalRevenue = readings.reduce((sum, item) => sum + item.revenue, 0);

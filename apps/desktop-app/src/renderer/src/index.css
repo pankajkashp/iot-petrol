@@ -358,6 +358,26 @@ button {
   font-size: 0.9rem;
 }
 
+.pump-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ghost-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ghost-button:hover {
+  background: #f7f9fc;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

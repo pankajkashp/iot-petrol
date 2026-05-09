@@ -1,8 +1,6 @@
-import { useDashboardStore } from "../store/useDashboardStore";
+import { DeviceActivityTable } from "../features/devices";
 
 export function DevicesPage() {
-  const logs = useDashboardStore((state) => state.logs);
-
   return (
     <section className="page">
       <header className="page-header">
@@ -12,18 +10,7 @@ export function DevicesPage() {
         </div>
       </header>
 
-      <div className="table-card">
-        {logs.map((log) => (
-          <div className="table-row" key={log.id}>
-            <div>
-              <strong>{log.message}</strong>
-              <p>{log.pumpId}</p>
-            </div>
-            <div>{log.level}</div>
-            <div>{new Date(log.createdAt).toLocaleTimeString()}</div>
-          </div>
-        ))}
-      </div>
+      <DeviceActivityTable />
     </section>
   );
 }

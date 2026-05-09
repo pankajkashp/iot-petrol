@@ -9,7 +9,9 @@
     "electron-vite": "^3.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "@fuel/shared-types": "*",
+    "@fuel/device-core": "*"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
@@ -26,6 +28,8 @@
     "dev:web": "vite",
     "build": "electron-vite build",
     "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf out dist dist-electron dist-renderer"

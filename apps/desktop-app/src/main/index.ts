@@ -1,13 +1,14 @@
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
+import { DeviceManager } from "@fuel/device-core";
 import { LocalDatabase } from "./services/LocalDatabase";
-import { DeviceManager } from "./services/DeviceManager";
+import { createDeviceMap } from "./services/deviceFactory";
 import { registerIpc } from "./ipc";
 
 let mainWindow: BrowserWindow | null = null;
 
 const database = new LocalDatabase();
-const deviceManager = new DeviceManager(database);
+let deviceManager: DeviceManager | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -15,7 +16,7 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 780,
-    backgroundColor: "#050b14",
+    backgroundColor: "#f5f7fb",
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -33,13 +34,19 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   database.initialize();
+  const deviceMap = createDeviceMap(await database.getPumps());
+  deviceManager = new DeviceManager({
+    repository: database,
+    devices: deviceMap
+  });
+
   registerIpc(deviceManager);
-  await deviceManager.start();
   createWindow();
+  await deviceManager.start();
 });
 
 app.on("window-all-closed", () => {
-  deviceManager.stop();
+  void deviceManager?.stop();
   if (process.platform !== "darwin") {
     app.quit();
   }

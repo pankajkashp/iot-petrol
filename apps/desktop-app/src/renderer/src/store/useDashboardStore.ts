@@ -1,56 +1,24 @@
 import { create } from "zustand";
+import type { DeviceOverview, PumpDefinition } from "@fuel/device-core";
 
-export type PumpStatus = "idle" | "dispensing" | "offline" | "error";
-
-export interface PumpCardModel {
-  id: string;
-  name: string;
-  nozzle: string;
-  fuelType: "petrol" | "diesel" | "cng";
-  pricePerLiter: number;
-  status: PumpStatus;
-  liters: number;
-  revenue: number;
-  lastReadingAt: string | null;
-}
+export type PumpStatus = PumpDefinition["status"];
+export type PumpCardModel = PumpDefinition;
 
 interface DashboardState {
-  activePage: "dashboard" | "pumps" | "devices" | "settings";
+  activePage: "dashboard" | "pumps" | "devices" | "settings" | "pump-detail";
+  selectedPumpId: string | null;
   pumps: PumpCardModel[];
-  readings: Array<{
-    id: string;
-    pumpId: string;
-    fuelType: "petrol" | "diesel" | "cng";
-    status: PumpStatus;
-    liters: number;
-    revenue: number;
-    createdAt: string;
-  }>;
-  logs: Array<{
-    id: string;
-    pumpId: string;
-    message: string;
-    level: "info" | "warn" | "error";
-    createdAt: string;
-  }>;
-  stats: {
-    totalPumps: number;
-    activePumps: number;
-    onlinePumps: number;
-    totalLiters: number;
-    totalRevenue: number;
-  };
+  readings: DeviceOverview["readings"];
+  logs: DeviceOverview["logs"];
+  stats: DeviceOverview["stats"];
   setActivePage: (page: DashboardState["activePage"]) => void;
-  setOverview: (overview: {
-    pumps: PumpCardModel[];
-    readings: DashboardState["readings"];
-    logs: DashboardState["logs"];
-    stats: DashboardState["stats"];
-  }) => void;
+  setSelectedPumpId: (id: string | null) => void;
+  setOverview: (overview: DeviceOverview) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
   activePage: "dashboard",
+  selectedPumpId: null,
   pumps: [],
   readings: [],
   logs: [],
@@ -62,5 +30,6 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     totalRevenue: 0
   },
   setActivePage: (page) => set({ activePage: page }),
+  setSelectedPumpId: (id) => set({ selectedPumpId: id, activePage: id ? "pump-detail" : "pumps" }),
   setOverview: (overview) => set(overview)
 }));

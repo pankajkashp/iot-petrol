@@ -4,13 +4,15 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { DevicesPage } from "./pages/DevicesPage";
 import { PumpsPage } from "./pages/PumpsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { PumpDetailPage } from "./pages/PumpDetailPage";
 import { useDashboardStore } from "./store/useDashboardStore";
 
 const pages = {
   dashboard: DashboardPage,
   pumps: PumpsPage,
   devices: DevicesPage,
-  settings: SettingsPage
+  settings: SettingsPage,
+  "pump-detail": PumpDetailPage
 } as const;
 
 export default function App() {
@@ -27,7 +29,7 @@ export default function App() {
         </div>
         <div className="topbar-meta">
           <span>Local-first</span>
-          <span className="status-pill tone-dispensing">System online</span>
+          <span className="status-pill tone-dispensing">Sensor feed mode</span>
         </div>
       </header>
       <Page />
