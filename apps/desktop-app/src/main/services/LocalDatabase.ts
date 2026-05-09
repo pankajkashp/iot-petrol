@@ -249,7 +249,7 @@ export class LocalDatabase implements DeviceRepository {
 
   async getOverview(): Promise<DeviceOverview> {
     const pumps = await this.getPumps();
-    const readings = this.getReadings(50);
+    const readings = await this.getReadings(50);
     const totalLiters = readings.reduce((sum, item) => sum + item.liters, 0);
     const totalRevenue = readings.reduce((sum, item) => sum + item.revenue, 0);
     const online = pumps.filter((pump) => pump.status !== "offline").length;
@@ -258,7 +258,7 @@ export class LocalDatabase implements DeviceRepository {
     return {
       pumps,
       readings,
-      logs: this.getLogs(12),
+      logs: await this.getLogs(12),
       stats: {
         totalPumps: pumps.length,
         activePumps: active,

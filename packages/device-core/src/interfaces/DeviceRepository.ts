@@ -25,9 +25,9 @@ export interface LogRepository {
 }
 
 export interface FuelPriceRepository {
-  getFuelPrices(city: string): Promise<FuelPrice[]>;
-  saveFuelPrices(prices: FuelPrice[]): Promise<void>;
-  getFuelPriceHistory(fuelType: FuelType, city: string, limit?: number): Promise<FuelPrice[]>;
+  getPrices(city: string): Promise<FuelPrice[]>;
+  savePrices(prices: FuelPrice[]): Promise<void>;
+  getPriceHistory(fuelType: FuelType, city: string, limit?: number): Promise<FuelPrice[]>;
 }
 
 export interface DeviceRepository
