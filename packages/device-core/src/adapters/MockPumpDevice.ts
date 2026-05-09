@@ -5,9 +5,12 @@ import type { PumpDeviceConfig, PumpDeviceStatus, PumpReading } from "../types";
 export class MockPumpDevice extends EventEmitter implements PumpDevice {
   private connected = false;
   private liters = 0;
+  private currentFlowRate = 0;
   private lastStatus: PumpDeviceStatus["status"] = "offline";
-  private online = false;
   private interval: NodeJS.Timeout | null = null;
+  
+  // Session tracking
+  private sessionStartTime: number | null = null;
   private sessionTicksRemaining = 0;
   private offlineTicksRemaining = 0;
 
@@ -16,12 +19,8 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
   }
 
   async connect() {
-    if (this.connected) {
-      return;
-    }
-
+    if (this.connected) return;
     this.connected = true;
-    this.online = true;
     this.lastStatus = "idle";
     this.emitDebug("connected");
     this.emitStatus();
@@ -29,15 +28,9 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
   }
 
   async disconnect() {
-    if (!this.connected) {
-      return;
-    }
-
+    if (!this.connected) return;
     this.connected = false;
     this.lastStatus = "offline";
-    this.online = false;
-    this.sessionTicksRemaining = 0;
-    this.offlineTicksRemaining = 0;
     this.stopSimulation();
     this.emitDebug("disconnected");
     this.emitStatus();
@@ -47,7 +40,7 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
     return {
       pumpId: this.config.pumpId,
       connected: this.connected,
-      status: this.connected ? this.lastStatus : "offline",
+      status: this.lastStatus,
       lastSeenAt: new Date().toISOString()
     };
   }
@@ -72,50 +65,57 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
     this.interval = setInterval(() => {
       if (!this.connected) return;
 
+      // Handle Offline state
       if (this.offlineTicksRemaining > 0) {
-        this.offlineTicksRemaining -= 1;
+        this.offlineTicksRemaining--;
         if (this.offlineTicksRemaining === 0) {
-          this.online = true;
           this.lastStatus = "idle";
-          this.emitDebug("recovered-online");
+          this.emitDebug("Back online");
           this.emitStatus();
         }
         return;
       }
 
+      // Randomly go offline (1% chance per second)
+      if (Math.random() < 0.01) {
+        this.lastStatus = "offline";
+        this.offlineTicksRemaining = 5 + Math.floor(Math.random() * 10);
+        this.currentFlowRate = 0;
+        this.sessionTicksRemaining = 0;
+        this.sessionStartTime = null;
+        this.emitDebug(`Hardware failure! Offline for ${this.offlineTicksRemaining}s`);
+        this.emitStatus();
+        return;
+      }
+
+      // Handle Dispensing state
       if (this.sessionTicksRemaining > 0) {
-        this.sessionTicksRemaining -= 1;
-        this.lastStatus = "dispensing";
-        const flowRate = Number((0.8 + Math.random() * 2.7).toFixed(2));
-        this.liters = Number((this.liters + flowRate).toFixed(2));
-        this.emitDebug(`dispensing +${flowRate.toFixed(2)}L`);
+        this.sessionTicksRemaining--;
+        
+        // Realistic flow rate variation
+        const targetFlow = 1.2 + Math.random() * 2.5;
+        this.currentFlowRate = Number((this.currentFlowRate * 0.7 + targetFlow * 0.3).toFixed(2));
+        this.liters += this.currentFlowRate;
+        
         this.emitReading();
+
         if (this.sessionTicksRemaining === 0) {
           this.lastStatus = "idle";
-          this.emitDebug("session-stopped");
+          this.currentFlowRate = 0;
+          this.sessionStartTime = null;
+          this.emitDebug("Session complete");
           this.emitStatus();
         }
         return;
       }
 
-      const offlineRoll = Math.random();
-      if (offlineRoll < 0.03) {
-        this.online = false;
-        this.lastStatus = "offline";
-        this.offlineTicksRemaining = 4 + Math.floor(Math.random() * 8);
-        this.emitDebug(`offline-for-${this.offlineTicksRemaining}s`);
-        this.emitStatus();
-        return;
-      }
-
-      const startRoll = Math.random();
-      if (startRoll < 0.18) {
-        this.sessionTicksRemaining = 3 + Math.floor(Math.random() * 8);
+      // Handle Idle state -> Start new session (10% chance per second)
+      if (this.lastStatus === "idle" && Math.random() < 0.1) {
         this.lastStatus = "dispensing";
-        this.emitDebug(`session-started ticks=${this.sessionTicksRemaining}`);
+        this.sessionTicksRemaining = 5 + Math.floor(Math.random() * 20);
+        this.sessionStartTime = Date.now();
+        this.emitDebug(`Session started: ${this.sessionTicksRemaining}s duration`);
         this.emitStatus();
-        this.liters = Number((this.liters + Number((1 + Math.random() * 1.8).toFixed(2))).toFixed(2));
-        this.emitReading();
       }
     }, 1000);
   }
@@ -128,6 +128,10 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
   }
 
   private createReading(): PumpReading {
+    const sessionDuration = this.sessionStartTime 
+      ? Math.floor((Date.now() - this.sessionStartTime) / 1000) 
+      : 0;
+
     return {
       id: crypto.randomUUID(),
       pumpId: this.config.pumpId,
@@ -135,6 +139,8 @@ export class MockPumpDevice extends EventEmitter implements PumpDevice {
       status: this.lastStatus,
       liters: Number(this.liters.toFixed(2)),
       revenue: Number((this.liters * this.config.pricePerLiter).toFixed(2)),
+      flowRate: this.currentFlowRate,
+      sessionDuration,
       createdAt: new Date().toISOString()
     };
   }

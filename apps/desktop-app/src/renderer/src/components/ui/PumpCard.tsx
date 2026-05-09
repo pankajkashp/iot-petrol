@@ -35,6 +35,18 @@ export function PumpCard({
           <span>Revenue</span>
           <strong>₹{Math.round(pump.revenue).toLocaleString()}</strong>
         </div>
+        {pump.status === "dispensing" && (
+          <>
+            <div>
+              <span>Flow Rate</span>
+              <strong style={{ color: "var(--blue)" }}>{pump.flowRate?.toFixed(2)} L/s</strong>
+            </div>
+            <div>
+              <span>Duration</span>
+              <strong>{pump.sessionDuration}s</strong>
+            </div>
+          </>
+        )}
       </div>
       <p className="pump-updated">
         Updated {pump.lastReadingAt ? new Date(pump.lastReadingAt).toLocaleTimeString() : "just now"}

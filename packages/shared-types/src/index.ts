@@ -8,6 +8,8 @@ export interface PumpReading {
   status: PumpStatus;
   liters: number;
   revenue: number;
+  flowRate?: number; // L/s
+  sessionDuration?: number; // seconds
   createdAt: string;
 }
 
@@ -30,6 +32,8 @@ export interface PumpDefinition extends PumpDeviceConfig {
   status: PumpStatus;
   liters: number;
   revenue: number;
+  flowRate?: number;
+  sessionDuration?: number;
   lastReadingAt: string | null;
 }
 

@@ -15,6 +15,7 @@ export class DeviceManager extends EventEmitter {
   private readonly devices: Record<string, PumpDevice>;
   private readonly activeSubscriptions = new Map<string, () => void>();
   private readonly lastPumpStatus = new Map<string, PumpDefinition["status"]>();
+  private readonly liveStats = new Map<string, { flowRate: number; sessionDuration: number }>();
 
   constructor(options: DeviceManagerOptions) {
     super();
@@ -81,6 +82,10 @@ export class DeviceManager extends EventEmitter {
         level: "info",
         createdAt: reading.createdAt
       });
+      this.liveStats.set(pumpId, { 
+        flowRate: reading.flowRate || 0, 
+        sessionDuration: reading.sessionDuration || 0 
+      });
       this.emit("reading", reading);
       this.emitEvent({
         type: DeviceEventType.FLOW_UPDATED,
@@ -89,7 +94,9 @@ export class DeviceManager extends EventEmitter {
         payload: {
           liters: reading.liters,
           revenue: reading.revenue,
-          status: reading.status
+          status: reading.status,
+          flowRate: reading.flowRate,
+          sessionDuration: reading.sessionDuration
         }
       });
       this.emitOverview();
@@ -222,7 +229,17 @@ export class DeviceManager extends EventEmitter {
 
   private emitOverview() {
     void this.repository.getOverview().then((overview) => {
-      this.emit("overview", overview);
+      // Inject live stats into pumps
+      const enrichedPumps = overview.pumps.map(pump => {
+        const stats = this.liveStats.get(pump.pumpId);
+        return {
+          ...pump,
+          flowRate: stats?.flowRate || 0,
+          sessionDuration: stats?.sessionDuration || 0
+        };
+      });
+
+      this.emit("overview", { ...overview, pumps: enrichedPumps });
     });
   }
 }
