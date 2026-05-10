@@ -1,13 +1,11 @@
 import { create } from "zustand";
-import type { DeviceOverview, PumpDefinition } from "@fuel/device-core";
-
-export type PumpStatus = PumpDefinition["status"];
-export type PumpCardModel = PumpDefinition;
+import type { DeviceOverview, PumpDefinition, DispensingSession } from "@fuel/shared-types";
 
 interface DashboardState {
   isLoading: boolean;
-  pumps: PumpCardModel[];
-  readings: DeviceOverview["readings"];
+  pumps: PumpDefinition[];
+  activeSessions: DispensingSession[];
+  recentSessions: DispensingSession[];
   logs: DeviceOverview["logs"];
   stats: DeviceOverview["stats"];
   setLoading: (loading: boolean) => void;
@@ -17,14 +15,14 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>((set) => ({
   isLoading: true,
   pumps: [],
-  readings: [],
+  activeSessions: [],
+  recentSessions: [],
   logs: [],
   stats: {
-    totalPumps: 0,
-    activePumps: 0,
-    onlinePumps: 0,
-    totalLiters: 0,
-    totalRevenue: 0
+    todayRevenue: 0,
+    todayLiters: 0,
+    todaySessions: 0,
+    activePumps: 0
   },
   setLoading: (loading) => set({ isLoading: loading }),
   setOverview: (overview) => set({ ...overview, isLoading: false })

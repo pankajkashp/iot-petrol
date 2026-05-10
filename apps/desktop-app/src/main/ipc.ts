@@ -1,24 +1,25 @@
 import { BrowserWindow, ipcMain } from "electron";
 import type { DeviceManager } from "@fuel/device-core";
-import type { FuelPriceService } from "@fuel/billing-engine";
 import type { FuelType } from "@fuel/shared-types";
 
-export function registerIpc(deviceManager: DeviceManager, fuelPriceService: FuelPriceService) {
+export function registerIpc(deviceManager: DeviceManager, database: any) {
   ipcMain.handle("desktop:get-overview", async () => deviceManager.getOverview());
   ipcMain.handle("desktop:get-pumps", async () => (await deviceManager.getOverview()).pumps);
-  ipcMain.handle("desktop:get-readings", async () => (await deviceManager.getOverview()).readings);
-  ipcMain.handle("desktop:get-logs", async () => (await deviceManager.getOverview()).logs);
-  ipcMain.handle("desktop:toggle-sensor-feed", (_event, pumpId: string) =>
-    deviceManager.toggleSensorFeed(pumpId)
-  );
+  ipcMain.handle("desktop:get-logs", async () => (await database.getLogs()));
+  
+  ipcMain.handle("desktop:toggle-sensor-feed", (_event, pumpId: string) => {
+    // Note: In the new transactional architecture, manual toggling might be handled differently
+    // but we keep the IPC mapping for UI compatibility with the simulator
+    console.log(`[IPC] Toggle sensor feed for ${pumpId}`);
+  });
 
-  // Fuel Price IPC
-  ipcMain.handle("desktop:get-fuel-prices", async (_event, city: string, refresh?: boolean) => 
-    fuelPriceService.getPrices(city, refresh)
+  // Fuel Price IPC (Using database directly as a simple provider)
+  ipcMain.handle("desktop:get-fuel-prices", async (_event, city: string) => 
+    database.getPrices(city)
   );
   
   ipcMain.handle("desktop:get-fuel-history", async (_event, fuelType: FuelType, city: string, limit?: number) => 
-    fuelPriceService.getPriceHistory(fuelType, city, limit)
+    database.getPriceHistory(fuelType, city, limit)
   );
 
   deviceManager.on("event", (event) => {

@@ -664,3 +664,174 @@ button {
   color: var(--subtle);
   margin-top: 4px;
 }
+
+/* Transactional UI */
+.pump-card.active {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue), 0 8px 24px rgba(30, 58, 138, 0.12);
+}
+
+.pump-main-display {
+  padding: 16px 0;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+}
+
+.dispensing-display {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+.live-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.live-metric .label {
+  font-size: 0.75rem;
+  color: var(--subtle);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.live-metric .value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse {
+  animation: soft-pulse 2s infinite ease-in-out;
+}
+
+@keyframes soft-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.transaction-mini-list {
+  display: grid;
+  gap: 8px;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--gray-soft);
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.tx-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-meta strong {
+  font-size: 0.85rem;
+}
+
+.tx-meta span {
+  font-size: 0.75rem;
+  color: var(--subtle);
+}
+
+.tx-data {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-liters {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.tx-amount {
+  font-size: 0.8rem;
+  color: var(--subtle);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--subtle);
+  font-size: 0.9rem;
+}
+
+/* Detail Page Operational Styles */
+.detail-dispensing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding: 12px 0;
+}
+
+.big-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.big-metric .label {
+  font-size: 0.8rem;
+  color: var(--subtle);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.big-metric .value {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-idle-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--subtle);
+  text-align: center;
+}
+
+.idle-nozzle-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-row:last-child {
+  border-bottom: none;
+}
+
+.status-row span {
+  color: var(--subtle);
+  font-size: 0.9rem;
+}
+
+.status-row strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+}

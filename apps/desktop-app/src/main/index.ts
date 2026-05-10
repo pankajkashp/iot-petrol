@@ -1,16 +1,11 @@
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
-import { DeviceManager } from "@fuel/device-core";
-import { FuelPriceService, MockFuelPriceProvider } from "@fuel/billing-engine";
+import { DeviceManager, MockDispenserProtocol } from "@fuel/device-core";
 import { LocalDatabase } from "./services/LocalDatabase";
-import { createDeviceMap } from "./services/deviceFactory";
 import { registerIpc } from "./ipc";
 
 let mainWindow: BrowserWindow | null = null;
-
 const database = new LocalDatabase();
-let deviceManager: DeviceManager | null = null;
-let fuelPriceService: FuelPriceService | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -38,24 +33,28 @@ function createWindow() {
 app.whenReady().then(async () => {
   database.initialize();
   
-  const deviceMap = createDeviceMap(await database.getPumps());
-  deviceManager = new DeviceManager({
-    repository: database,
-    devices: deviceMap
+  const pumps = await database.getPumps();
+  const protocol = new MockDispenserProtocol(pumps.map(p => ({ 
+    id: p.pumpId, 
+    price: p.pricePerLiter 
+  })));
+
+  const deviceManager = new DeviceManager({
+    database,
+    protocol
   });
 
-  fuelPriceService = new FuelPriceService(
-    new MockFuelPriceProvider(),
-    database
-  );
+  // Re-broadcast overview on every update
+  deviceManager.on("overview", (overview) => {
+    mainWindow?.webContents.send("overview-update", overview);
+  });
 
-  registerIpc(deviceManager, fuelPriceService);
+  registerIpc(deviceManager, database);
   createWindow();
   await deviceManager.start();
 });
 
 app.on("window-all-closed", () => {
-  void deviceManager?.stop();
   if (process.platform !== "darwin") {
     app.quit();
   }

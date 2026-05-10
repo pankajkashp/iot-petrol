@@ -1,6 +1,6 @@
 import type {
   PumpDefinition,
-  PumpReading,
+  DispensingSession,
   DeviceLog,
   DeviceOverview,
   FuelPrice,
@@ -10,13 +10,13 @@ import type {
 export interface PumpRepository {
   getPumps(): Promise<PumpDefinition[]>;
   savePumpState(
-    pump: Pick<PumpDefinition, "pumpId" | "status" | "liters" | "revenue" | "lastReadingAt">
+    pump: Pick<PumpDefinition, "pumpId" | "status" | "totalLitersLifetime" | "totalRevenueLifetime" | "lastSessionAt">
   ): Promise<void>;
 }
 
-export interface ReadingRepository {
-  getReadings(limit?: number): Promise<PumpReading[]>;
-  saveReading(reading: PumpReading): Promise<void>;
+export interface SessionRepository {
+  getRecentSessions(limit?: number): Promise<DispensingSession[]>;
+  saveSession(session: DispensingSession): Promise<void>;
 }
 
 export interface LogRepository {
@@ -32,7 +32,7 @@ export interface FuelPriceRepository {
 
 export interface DeviceRepository
   extends PumpRepository,
-    ReadingRepository,
+    SessionRepository,
     LogRepository,
     FuelPriceRepository {
   getOverview(): Promise<DeviceOverview>;

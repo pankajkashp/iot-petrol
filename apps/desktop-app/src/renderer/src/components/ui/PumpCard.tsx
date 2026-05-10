@@ -1,67 +1,67 @@
-import { Link } from "react-router-dom";
-import type { PumpCardModel } from "../../store/useDashboardStore";
+import { useNavigate } from "react-router-dom";
+import type { PumpDefinition, DispensingSession } from "@fuel/shared-types";
 import { StatusBadge } from "./StatusBadge";
 
-export function PumpCard({
-  pump,
-  onRecordReading
-}: {
-  pump: PumpCardModel;
-  onRecordReading: (pumpId: string) => void;
-}) {
-  const statusLabel = pump.status === "dispensing" ? "Sensor live" : pump.status === "idle" ? "Ready" : "Offline";
-  const actionLabel = pump.status === "dispensing" ? "Stop sensor feed" : "Start sensor feed";
+interface PumpCardProps {
+  pump: PumpDefinition;
+  activeSession?: DispensingSession;
+}
+
+export function PumpCard({ pump, activeSession }: PumpCardProps) {
+  const navigate = useNavigate();
+  const isDispensing = pump.status === "dispensing";
+  
+  const handleCardClick = () => {
+    navigate(`/pumps/${pump.pumpId}`);
+  };
 
   return (
-    <article className="pump-card">
+    <article 
+      className={`pump-card ${isDispensing ? 'active' : ''}`}
+      onClick={handleCardClick}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="pump-card-top">
-        <Link 
-          to={`/pumps/${pump.pumpId}`}
-          style={{ cursor: 'pointer', textDecoration: 'none', color: 'inherit' }}
-        >
+        <div>
           <p className="pump-name">{pump.pumpName}</p>
           <p className="pump-subtitle">
-            {pump.nozzle} · {pump.fuelType.toUpperCase()} · {statusLabel}
+            {pump.nozzle} · {pump.fuelType.toUpperCase()}
           </p>
-        </Link>
+        </div>
         <StatusBadge status={pump.status} />
       </div>
-      <div className="pump-grid">
-        <div>
-          <span>Liters</span>
-          <strong>{pump.liters.toFixed(2)}</strong>
-        </div>
-        <div>
-          <span>Revenue</span>
-          <strong>₹{Math.round(pump.revenue).toLocaleString()}</strong>
-        </div>
-        {pump.status === "dispensing" && (
-          <>
-            <div>
-              <span>Flow Rate</span>
-              <strong style={{ color: "var(--blue)" }}>{pump.flowRate?.toFixed(2)} L/s</strong>
+
+      <div className="pump-main-display">
+        {isDispensing && activeSession ? (
+          <div className="dispensing-display">
+            <div className="live-metric">
+              <span className="label">Amount</span>
+              <strong className="value pulse">₹{activeSession.totalAmount.toFixed(2)}</strong>
             </div>
-            <div>
-              <span>Duration</span>
-              <strong>{pump.sessionDuration}s</strong>
+            <div className="live-metric">
+              <span className="label">Liters</span>
+              <strong className="value">{activeSession.liters.toFixed(2)} L</strong>
             </div>
-          </>
+            <div className="live-meta">
+              <span>{activeSession.durationSeconds}s duration</span>
+            </div>
+          </div>
+        ) : (
+          <div className="idle-display">
+            <div className="metric">
+              <span>Total Liters (Lifetime)</span>
+              <strong>{pump.totalLitersLifetime.toFixed(2)} L</strong>
+            </div>
+            <div className="metric">
+              <span>Last Transaction</span>
+              <strong>{pump.lastSessionAt ? new Date(pump.lastSessionAt).toLocaleTimeString() : "N/A"}</strong>
+            </div>
+          </div>
         )}
       </div>
-      <p className="pump-updated">
-        Updated {pump.lastReadingAt ? new Date(pump.lastReadingAt).toLocaleTimeString() : "just now"}
-      </p>
-      <div className="pump-actions" style={{ gap: '8px' }}>
-        <Link 
-          to={`/pumps/${pump.pumpId}`}
-          className="ghost-button"
-          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          View Details
-        </Link>
-        <button type="button" className="ghost-button" onClick={() => onRecordReading(pump.pumpId)}>
-          {actionLabel}
-        </button>
+
+      <div className="pump-footer">
+        <span className="price-tag">₹{pump.pricePerLiter.toFixed(2)} / L</span>
       </div>
     </article>
   );

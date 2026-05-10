@@ -4,6 +4,8 @@ import { Logo } from "../ui/Logo";
 const items = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard" },
   { id: "pumps", label: "Pumps", path: "/pumps" },
+  { id: "transactions", label: "Transactions", path: "/transactions" },
+  { id: "reports", label: "Reports", path: "/reports" },
   { id: "devices", label: "Devices", path: "/devices" },
   { id: "settings", label: "Settings", path: "/settings" }
 ] as const;
@@ -15,7 +17,7 @@ export function Sidebar() {
         <Logo size={36} />
         <p className="eyebrow" style={{ marginTop: "16px" }}>Station Console</p>
         <p className="sidebar-copy">
-          Daily operations for fuel stations, devices, and local-first syncing.
+          Forecourt operational control system.
         </p>
       </div>
       <nav className="nav">

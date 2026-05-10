@@ -4,8 +4,6 @@ import type { DeviceEvent, DeviceOverview, FuelPrice, FuelType } from "@fuel/dev
 contextBridge.exposeInMainWorld("desktopApi", {
   getOverview: () => ipcRenderer.invoke("desktop:get-overview") as Promise<DeviceOverview>,
   getPumps: () => ipcRenderer.invoke("desktop:get-pumps") as Promise<DeviceOverview["pumps"]>,
-  getReadings: () =>
-    ipcRenderer.invoke("desktop:get-readings") as Promise<DeviceOverview["readings"]>,
   getLogs: () => ipcRenderer.invoke("desktop:get-logs") as Promise<DeviceOverview["logs"]>,
   toggleSensorFeed: (pumpId: string) => ipcRenderer.invoke("desktop:toggle-sensor-feed", pumpId),
   

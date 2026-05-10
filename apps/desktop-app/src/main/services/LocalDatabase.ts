@@ -5,22 +5,24 @@ import { app } from "electron";
 import type {
   DeviceLog,
   DeviceOverview,
-  DeviceRepository,
+  DispensingSession,
   PumpDefinition,
-  PumpReading,
+  DailyReport,
+  MonthlyReport,
+  YearlyReport,
   FuelPrice,
   FuelType
-} from "@fuel/device-core";
+} from "@fuel/shared-types";
 
 type DatabaseInstance = ReturnType<typeof Database>;
 
-export class LocalDatabase implements DeviceRepository {
+export class LocalDatabase {
   private db!: DatabaseInstance;
 
   initialize() {
-    const dataDir = path.join(app.getPath("userData"), "fuel-local");
+    const dataDir = path.join(app.getPath("userData"), "pumpcore-data");
     fs.mkdirSync(dataDir, { recursive: true });
-    this.db = new Database(path.join(dataDir, "desktop.sqlite"));
+    this.db = new Database(path.join(dataDir, "station.sqlite"));
     this.db.pragma("journal_mode = WAL");
     this.createTables();
     this.seedPumps();
@@ -35,27 +37,33 @@ export class LocalDatabase implements DeviceRepository {
         fuelType TEXT NOT NULL,
         pricePerLiter REAL NOT NULL,
         status TEXT NOT NULL,
-        liters REAL NOT NULL DEFAULT 0,
-        revenue REAL NOT NULL DEFAULT 0,
-        lastReadingAt TEXT
+        totalLitersLifetime REAL NOT NULL DEFAULT 0,
+        totalRevenueLifetime REAL NOT NULL DEFAULT 0,
+        lastSessionAt TEXT
       );
 
-      CREATE TABLE IF NOT EXISTS readings (
+      CREATE TABLE IF NOT EXISTS dispensing_sessions (
         id TEXT PRIMARY KEY,
         pumpId TEXT NOT NULL,
         fuelType TEXT NOT NULL,
-        status TEXT NOT NULL,
         liters REAL NOT NULL,
-        revenue REAL NOT NULL,
+        pricePerLiter REAL NOT NULL,
+        totalAmount REAL NOT NULL,
+        status TEXT NOT NULL,
+        startedAt TEXT NOT NULL,
+        endedAt TEXT,
+        durationSeconds INTEGER NOT NULL DEFAULT 0,
+        isSynced INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS device_logs (
+      CREATE TABLE IF NOT EXISTS daily_reports (
         id TEXT PRIMARY KEY,
-        pumpId TEXT NOT NULL,
-        message TEXT NOT NULL,
-        level TEXT NOT NULL,
-        createdAt TEXT NOT NULL
+        date TEXT UNIQUE NOT NULL,
+        totalLiters REAL NOT NULL,
+        totalRevenue REAL NOT NULL,
+        sessionCount INTEGER NOT NULL,
+        timestamp TEXT NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS fuel_prices (
@@ -64,247 +72,137 @@ export class LocalDatabase implements DeviceRepository {
         price REAL NOT NULL,
         provider TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
-        is_synced INTEGER DEFAULT 0,
         PRIMARY KEY (fuelType, city)
       );
 
-      CREATE TABLE IF NOT EXISTS fuel_price_history (
+      CREATE TABLE IF NOT EXISTS device_logs (
         id TEXT PRIMARY KEY,
-        fuelType TEXT NOT NULL,
-        city TEXT NOT NULL,
-        price REAL NOT NULL,
-        provider TEXT NOT NULL,
-        createdAt TEXT NOT NULL,
-        is_synced INTEGER DEFAULT 0
+        pumpId TEXT,
+        message TEXT NOT NULL,
+        level TEXT NOT NULL,
+        createdAt TEXT NOT NULL
       );
     `);
   }
 
   private seedPumps() {
     const count = this.db.prepare("SELECT COUNT(*) as count FROM pumps").get() as { count: number };
-    if (count.count > 0) {
-      return;
-    }
+    if (count.count > 0) return;
 
     const insert = this.db.prepare(`
-      INSERT INTO pumps (id, name, nozzle, fuelType, pricePerLiter, status, liters, revenue, lastReadingAt)
-      VALUES (@pumpId, @pumpName, @nozzle, @fuelType, @pricePerLiter, @status, @liters, @revenue, @lastReadingAt)
+      INSERT INTO pumps (id, name, nozzle, fuelType, pricePerLiter, status)
+      VALUES (@id, @name, @nozzle, @fuelType, @pricePerLiter, @status)
     `);
 
-    const defaults: PumpDefinition[] = [
-      {
-        pumpId: "pump-1",
-        pumpName: "Pump A-01",
-        nozzle: "Nozzle 1",
-        fuelType: "diesel",
-        pricePerLiter: 92.75,
-        status: "idle",
-        liters: 0,
-        revenue: 0,
-        lastReadingAt: null
-      },
-      {
-        pumpId: "pump-2",
-        pumpName: "Pump A-02",
-        nozzle: "Nozzle 2",
-        fuelType: "petrol",
-        pricePerLiter: 108.25,
-        status: "idle",
-        liters: 0,
-        revenue: 0,
-        lastReadingAt: null
-      },
-      {
-        pumpId: "pump-3",
-        pumpName: "Pump B-01",
-        nozzle: "Nozzle 1",
-        fuelType: "cng",
-        pricePerLiter: 74.15,
-        status: "idle",
-        liters: 0,
-        revenue: 0,
-        lastReadingAt: null
-      },
-      {
-        pumpId: "pump-4",
-        pumpName: "Pump B-02",
-        nozzle: "Nozzle 2",
-        fuelType: "diesel",
-        pricePerLiter: 91.1,
-        status: "idle",
-        liters: 0,
-        revenue: 0,
-        lastReadingAt: null
-      }
+    const defaults = [
+      { id: "P-001", name: "Pump 01", nozzle: "N-1", fuelType: "petrol", pricePerLiter: 104.5, status: "idle" },
+      { id: "P-002", name: "Pump 02", nozzle: "N-2", fuelType: "diesel", pricePerLiter: 92.1, status: "idle" },
+      { id: "P-003", name: "Pump 03", nozzle: "N-1", fuelType: "petrol", pricePerLiter: 104.5, status: "idle" },
+      { id: "P-004", name: "Pump 04", nozzle: "N-2", fuelType: "cng", pricePerLiter: 78.4, status: "idle" }
     ];
 
-    const transaction = this.db.transaction((rows: PumpDefinition[]) => {
+    const tx = this.db.transaction((rows) => {
       rows.forEach((row) => insert.run(row));
     });
-    transaction(defaults);
+    tx(defaults);
   }
 
-  async getPumps() {
-    const rows = this.db.prepare("SELECT * FROM pumps ORDER BY name ASC").all() as Array<{
-      id: string;
-      name: string;
-      nozzle: string;
-      fuelType: PumpDefinition["fuelType"];
-      pricePerLiter: number;
-      status: PumpDefinition["status"];
-      liters: number;
-      revenue: number;
-      lastReadingAt: string | null;
-    }>;
+  // --- Pump Operations ---
 
-    return rows.map((row) => ({
-      pumpId: row.id,
-      pumpName: row.name,
-      nozzle: row.nozzle,
-      fuelType: row.fuelType,
-      pricePerLiter: row.pricePerLiter,
-      status: row.status,
-      liters: row.liters,
-      revenue: row.revenue,
-      lastReadingAt: row.lastReadingAt
+  async getPumps(): Promise<PumpDefinition[]> {
+    const rows = this.db.prepare("SELECT * FROM pumps ORDER BY name ASC").all() as any[];
+    return rows.map(r => ({
+      pumpId: r.id,
+      pumpName: r.name,
+      nozzle: r.nozzle,
+      fuelType: r.fuelType,
+      pricePerLiter: r.pricePerLiter,
+      status: r.status,
+      totalLitersLifetime: r.totalLitersLifetime,
+      totalRevenueLifetime: r.totalRevenueLifetime,
+      lastSessionAt: r.lastSessionAt
     }));
   }
 
-  async getReadings(limit = 24) {
-    return this.db
-      .prepare("SELECT * FROM readings ORDER BY createdAt DESC LIMIT ?")
-      .all(limit) as PumpReading[];
+  async updatePumpStatus(pumpId: string, status: PumpStatus) {
+    this.db.prepare("UPDATE pumps SET status = ? WHERE id = ?").run(status, pumpId);
   }
 
-  async getLogs(limit = 24) {
-    return this.db
-      .prepare("SELECT * FROM device_logs ORDER BY createdAt DESC LIMIT ?")
-      .all(limit) as DeviceLog[];
-  }
+  // --- Session Operations ---
 
-  async savePumpState(
-    pump: Pick<PumpDefinition, "pumpId" | "status" | "liters" | "revenue" | "lastReadingAt">
-  ) {
-    this.db
-      .prepare(
-        `
-      UPDATE pumps
-      SET status = @status,
-          liters = @liters,
-          revenue = @revenue,
-          lastReadingAt = @lastReadingAt
-      WHERE id = @pumpId
-    `
-      )
-      .run(pump);
-  }
+  async saveSession(session: DispensingSession) {
+    const insert = this.db.prepare(`
+      INSERT OR REPLACE INTO dispensing_sessions 
+      (id, pumpId, fuelType, liters, pricePerLiter, totalAmount, status, startedAt, endedAt, durationSeconds, createdAt)
+      VALUES (@id, @pumpId, @fuelType, @liters, @pricePerLiter, @totalAmount, @status, @startedAt, @endedAt, @durationSeconds, @createdAt)
+    `);
 
-  async saveReading(reading: PumpReading) {
-    const updatePump = this.db.prepare(`
-      UPDATE pumps
-      SET status = @status,
-          liters = @liters,
-          revenue = @revenue,
-          lastReadingAt = @createdAt
+    const updatePumpTotals = this.db.prepare(`
+      UPDATE pumps 
+      SET totalLitersLifetime = totalLitersLifetime + @liters,
+          totalRevenueLifetime = totalRevenueLifetime + @totalAmount,
+          lastSessionAt = @endedAt
       WHERE id = @pumpId
     `);
 
-    const insertReading = this.db.prepare(`
-      INSERT INTO readings (id, pumpId, fuelType, status, liters, revenue, createdAt)
-      VALUES (@id, @pumpId, @fuelType, @status, @liters, @revenue, @createdAt)
-    `);
-
-    const insertLog = this.db.prepare(`
-      INSERT INTO device_logs (id, pumpId, message, level, createdAt)
-      VALUES (@id, @pumpId, @message, @level, @createdAt)
-    `);
-
-    const logId = crypto.randomUUID();
-
-    const tx = this.db.transaction(() => {
-      insertReading.run(reading);
-      updatePump.run(reading);
-      insertLog.run({
-        id: logId,
-        pumpId: reading.pumpId,
-        message: `Stored ${reading.liters.toFixed(2)}L for ${reading.pumpId}`,
-        level: "info",
-        createdAt: reading.createdAt
-      });
+    const tx = this.db.transaction((s: DispensingSession) => {
+      insert.run(s);
+      if (s.status === "completed") {
+        updatePumpTotals.run({ 
+          pumpId: s.pumpId, 
+          liters: s.liters, 
+          totalAmount: s.totalAmount, 
+          endedAt: s.endedAt 
+        });
+      }
     });
 
-    tx();
+    tx(session);
   }
 
-  async saveDeviceLog(log: DeviceLog) {
-    this.db
-      .prepare(
-        `
-      INSERT INTO device_logs (id, pumpId, message, level, createdAt)
-      VALUES (@id, @pumpId, @message, @level, @createdAt)
-    `
-      )
-      .run(log);
+  async getRecentSessions(limit = 20): Promise<DispensingSession[]> {
+    return this.db.prepare("SELECT * FROM dispensing_sessions ORDER BY createdAt DESC LIMIT ?").all(limit) as any[];
   }
+
+  // --- Reporting & Overview ---
 
   async getOverview(): Promise<DeviceOverview> {
     const pumps = await this.getPumps();
-    const readings = await this.getReadings(50);
-    const totalLiters = readings.reduce((sum, item) => sum + item.liters, 0);
-    const totalRevenue = readings.reduce((sum, item) => sum + item.revenue, 0);
-    const online = pumps.filter((pump) => pump.status !== "offline").length;
-    const active = pumps.filter((pump) => pump.status === "dispensing").length;
+    const today = new Date().toISOString().split("T")[0];
+    
+    const todayStats = this.db.prepare(`
+      SELECT 
+        SUM(totalAmount) as revenue, 
+        SUM(liters) as liters, 
+        COUNT(*) as sessions 
+      FROM dispensing_sessions 
+      WHERE startedAt LIKE ? AND status = 'completed'
+    `).get(`${today}%`) as { revenue: number, liters: number, sessions: number };
+
+    const recentSessions = await this.getRecentSessions(10);
+    const activePumps = pumps.filter(p => p.status === "dispensing").length;
 
     return {
       pumps,
-      readings,
-      logs: await this.getLogs(12),
+      activeSessions: [], // Managed by DeviceManager in memory
+      recentSessions,
       stats: {
-        totalPumps: pumps.length,
-        activePumps: active,
-        onlinePumps: online,
-        totalLiters: Number(totalLiters.toFixed(2)),
-        totalRevenue: Number(totalRevenue.toFixed(2))
+        todayRevenue: todayStats.revenue || 0,
+        todayLiters: todayStats.liters || 0,
+        todaySessions: todayStats.sessions || 0,
+        activePumps
       }
     };
   }
 
-  async getPrices(city: string): Promise<FuelPrice[]> {
-    const rows = this.db
-      .prepare("SELECT * FROM fuel_prices WHERE city = ?")
-      .all(city) as FuelPrice[];
-    return rows;
+  async saveDeviceLog(log: DeviceLog) {
+    this.db.prepare(`
+      INSERT INTO device_logs (id, pumpId, message, level, createdAt)
+      VALUES (@id, @pumpId, @message, @level, @createdAt)
+    `).run(log);
   }
 
-  async savePrices(prices: FuelPrice[]): Promise<void> {
-    const insertPrice = this.db.prepare(`
-      INSERT OR REPLACE INTO fuel_prices (fuelType, city, price, provider, updatedAt)
-      VALUES (@fuelType, @city, @price, @provider, @updatedAt)
-    `);
-
-    const insertHistory = this.db.prepare(`
-      INSERT INTO fuel_price_history (id, fuelType, city, price, provider, createdAt)
-      VALUES (@id, @fuelType, @city, @price, @provider, @updatedAt)
-    `);
-
-    const tx = this.db.transaction(() => {
-      prices.forEach((p) => {
-        insertPrice.run(p);
-        insertHistory.run({
-          ...p,
-          id: crypto.randomUUID()
-        });
-      });
-    });
-
-    tx();
-  }
-
-  async getPriceHistory(fuelType: FuelType, city: string, limit = 10): Promise<FuelPrice[]> {
-    return this.db
-      .prepare(
-        "SELECT * FROM fuel_price_history WHERE fuelType = ? AND city = ? ORDER BY createdAt DESC LIMIT ?"
-      )
-      .all(fuelType, city, limit) as FuelPrice[];
+  async getLogs(limit = 50): Promise<DeviceLog[]> {
+    return this.db.prepare("SELECT * FROM device_logs ORDER BY createdAt DESC LIMIT ?").all(limit) as any[];
   }
 }

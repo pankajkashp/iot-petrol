@@ -1,85 +1,90 @@
-import { ActivityFeed } from "../../../components/ui/ActivityFeed";
 import { MetricCard } from "../../../components/ui/MetricCard";
 import { SectionCard } from "../../../components/ui/SectionCard";
-import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { resolveDesktopApi } from "../../../services/desktopApi";
 import { useDashboardStore } from "../../../store/useDashboardStore";
-import { PumpGrid } from "../../pumps";
-import { DeviceStatusPanel } from "../../devices";
-
-import { FuelPriceWidget } from "../../../components/ui/FuelPriceWidget";
+import { PumpCard } from "../../../components/ui/PumpCard";
+import { ActivityFeed } from "../../../components/ui/ActivityFeed";
 
 export function DashboardOverview() {
-  const api = resolveDesktopApi();
-  const pumps = useDashboardStore((state) => state.pumps);
-  const readings = useDashboardStore((state) => state.readings);
-  const logs = useDashboardStore((state) => state.logs);
-  const stats = useDashboardStore((state) => state.stats);
-
-  const activePumps = stats.activePumps || pumps.filter((pump) => pump.status === "dispensing").length;
-  const fuelToday = readings.reduce((sum, reading) => sum + reading.liters, 0);
-  const revenueToday = readings.reduce((sum, reading) => sum + reading.revenue, 0);
+  const { pumps, activeSessions, stats, logs, recentSessions } = useDashboardStore();
 
   return (
     <section className="page">
       <header className="page-header hero-header">
         <div>
-          <p className="eyebrow">Dashboard</p>
-          <h2>PumpCore Industrial Management Console</h2>
+          <p className="eyebrow">Forecourt Control Room</p>
+          <h2>PumpCore Operational Dashboard</h2>
           <p className="page-copy">
-            Real-time visibility into pump activity, device health, and local-first operations.
+            Monitoring live transactions, station revenue, and nozzle activity in real-time.
           </p>
         </div>
         <div className="hero-status">
-          <span className="hero-status-label">System status</span>
-          <StatusBadge status={pumps.some((pump) => pump.status === "error") ? "error" : "idle"} />
+          <span className="hero-status-label">Active Transacting</span>
+          <span className="status-pill tone-dispensing">{stats.activePumps} Pumps</span>
         </div>
       </header>
 
       <div className="metric-row">
         <MetricCard
-          label="Total Pumps"
-          value={`${stats.totalPumps}`}
-          hint="All pumps registered locally"
+          label="Today's Revenue"
+          value={`₹${Math.round(stats.todayRevenue).toLocaleString()}`}
+          hint={`${stats.todaySessions} Transactions today`}
           tone="accent"
         />
         <MetricCard
-          label="Active Pumps"
-          value={`${activePumps}`}
-          hint="Currently dispensing fuel"
+          label="Total Fuel Sold"
+          value={`${stats.todayLiters.toFixed(2)} L`}
+          hint="Aggregate volume today"
           tone="success"
         />
         <MetricCard
-          label="Total Fuel Today"
-          value={`${fuelToday.toFixed(2)} L`}
-          hint="From live simulator readings"
+          label="Active Load"
+          value={activeSessions.length > 0 ? `${activeSessions.length} Active` : "Idle"}
+          hint="Current ongoing dispensing"
           tone="warning"
         />
         <MetricCard
-          label="Revenue Today"
-          value={`₹${revenueToday.toFixed(2)}`}
-          hint="Estimated local revenue"
+          label="Station ID"
+          value="ST-IND-042"
+          hint="Location: New Delhi"
           tone="accent"
         />
       </div>
 
       <div className="dashboard-grid">
-        <SectionCard title="Pump Cards" subtitle="Live pump readings" className="span-2">
-          <PumpGrid
-            pumps={pumps}
-            onToggleSensorFeed={(pumpId) => void api.toggleSensorFeed(pumpId)}
-          />
+        <SectionCard title="Nozzle Monitoring" subtitle="Live transacting status" className="span-2">
+          <div className="pump-grid-layout">
+            {pumps.map((pump) => (
+              <PumpCard 
+                key={pump.pumpId} 
+                pump={pump} 
+                activeSession={activeSessions.find(s => s.pumpId === pump.pumpId)}
+              />
+            ))}
+          </div>
         </SectionCard>
 
-        <SectionCard title="Device Status" subtitle="Connectivity overview">
-          <DeviceStatusPanel pumps={pumps} />
+        <SectionCard title="Recent Transactions" subtitle="Last finalized sessions">
+          <div className="transaction-mini-list">
+            {recentSessions.length === 0 ? (
+              <p className="empty-state">No transactions recorded yet today.</p>
+            ) : (
+              recentSessions.map(s => (
+                <div key={s.id} className="transaction-item">
+                  <div className="tx-meta">
+                    <strong>{s.pumpId}</strong>
+                    <span>{new Date(s.createdAt).toLocaleTimeString()}</span>
+                  </div>
+                  <div className="tx-data">
+                    <span className="tx-liters">{s.liters.toFixed(2)} L</span>
+                    <span className="tx-amount">₹{s.totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </SectionCard>
 
-        <SectionCard title="Fuel Market" subtitle="Real-time city pricing">
-          <FuelPriceWidget />
-        </SectionCard>
-
-        <SectionCard title="Recent Activity" subtitle="Latest device events">
+        <SectionCard title="Device Intelligence" subtitle="System operational logs">
           <ActivityFeed items={logs.slice(0, 8)} />
         </SectionCard>
       </div>
