@@ -9,13 +9,6 @@
   Designed for the future of forecourt automation, cloud-connected intelligence, and hardware-agnostic operations.
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Turbo-2.3.0-EF4444?style=for-the-badge&logo=turborepo" alt="Turbo">
-  <img src="https://img.shields.io/badge/TypeScript-5.5.4-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Electron-Latest-47848F?style=for-the-badge&logo=electron" alt="Electron">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-</p>
 
 ---
 
@@ -96,5 +89,5 @@ npm run build
 ---
 
 <p align="center">
-  Built with ❤️ by the Antigravity Team
+  Built with ❤️ by the Pankaj
 </p>
