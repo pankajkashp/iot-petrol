@@ -5,11 +5,12 @@ import { StatusBadge } from "./StatusBadge";
 interface PumpCardProps {
   pump: PumpDefinition;
   activeSession?: DispensingSession;
+  onRecordReading?: (pumpId: string) => void;
 }
 
 export function PumpCard({ pump, activeSession }: PumpCardProps) {
   const navigate = useNavigate();
-  const isDispensing = pump.status === "dispensing";
+  const isDispensing = pump.status === "dispensing" && activeSession;
   
   const handleCardClick = () => {
     navigate(`/pumps/${pump.pumpId}`);
@@ -20,6 +21,8 @@ export function PumpCard({ pump, activeSession }: PumpCardProps) {
       className={`pump-card ${isDispensing ? 'active' : ''}`}
       onClick={handleCardClick}
       style={{ cursor: 'pointer' }}
+      role="button"
+      tabIndex={0}
     >
       <div className="pump-card-top">
         <div>
