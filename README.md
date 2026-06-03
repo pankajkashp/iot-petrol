@@ -1,51 +1,41 @@
-# <p align="center">⛽ Fuel IoT Platform</p>
+# ⛽ Fuel IoT Platform
 
 <p align="center">
-  <img src="./hero-banner.png" alt="Fuel IoT Hero Banner" width="100%">
+  <strong>Offline-first industrial fuel management platform with Electron desktop control and modular IoT device abstractions.</strong>
 </p>
-
-<p align="center">
-  <strong>Industrial-grade, offline-first fuel dispensing ecosystem.</strong><br>
-  Designed for the future of forecourt automation, cloud-connected intelligence, and hardware-agnostic operations.
-</p>
-
 
 ---
 
-## 🚀 Overview
+## 🚀 Project Summary
 
-The **Fuel IoT Platform** is a sophisticated monorepo architecture designed to handle the complexities of industrial fuel management. It provides a seamless bridge between physical fuel pumps and cloud-based analytics, ensuring operational continuity even in low-connectivity environments.
+**Fuel IoT Platform** is a TypeScript monorepo designed to connect fuel pump hardware, local desktop control, and reusable package logic in a single product architecture.
 
-### ✨ Key Capabilities
-
-- 🌍 **Multi-Tenant Cloud**: Scalable backend to manage multiple fuel stations and regions.
-- 📶 **Offline-First**: Desktop operations continue without interruption during network outages.
-- 🔌 **Pump Abstraction**: Hardware-independent layer supporting diverse industrial protocols.
-- 📦 **Monorepo Architecture**: Shared logic and types across mobile, web, and desktop.
-- 🔄 **Intelligent Sync**: Queue-based replication with automatic conflict resolution.
+This repository is built for industrial forecourt automation, providing a resilient edge application that can operate reliably with intermittent connectivity.
 
 ---
 
-## 🏗️ Architecture Layout
+## 🔥 Core Capabilities
 
-The project leverages a modern monorepo structure powered by **Turborepo** for lightning-fast builds and modularity.
+- **Electron desktop controller** for station operations
+- **Offline persistence** using SQLite and `better-sqlite3`
+- **Hardware-agnostic device layer** with `@fuel/device-core`
+- **Shared TypeScript contracts** via `@fuel/shared-types`
+- **Billing and transaction logic** in `@fuel/billing-engine`
+- **Monorepo orchestration** powered by Turborepo
+
+---
+
+## 🏗️ Repository Structure
 
 ```txt
 fuel-iot-platform/
-├── 📱 apps/
-│   ├── backend-api/        # Cloud-scale Node.js API
-│   ├── desktop-app/        # Electron-based station controller
-│   ├── device-simulator/   # Pump & sensor hardware mocking
-│   └── web-dashboard/      # Next.js administrative portal
-├── 📦 packages/
-│   ├── analytics-engine/   # Data processing and reporting logic
-│   ├── auth/               # Unified authentication service
-│   ├── billing-engine/     # Transaction and invoicing logic
-│   ├── device-core/        # Hardware interface contracts
-│   ├── shared-types/       # TypeScript interface definitions
-│   ├── sync-engine/        # Offline-to-Cloud replication logic
-│   └── ui/                 # Shared design system components
-└── ...
+├── apps/
+│   └── desktop-app/        # Electron + Vite + React station controller
+├── packages/
+│   ├── billing-engine/     # Transaction and billing logic
+│   ├── device-core/        # Pump device adapters and protocol contracts
+│   └── shared-types/       # Shared TypeScript interfaces and domain types
+└── package.json            # Turborepo workspace configuration
 ```
 
 ---
@@ -54,40 +44,34 @@ fuel-iot-platform/
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Framework** | [Turborepo](https://turbo.build/), [Vite](https://vitejs.dev/) |
-| **Frontend** | [React](https://reactjs.org/), [Tailwind CSS](https://tailwindcss.com/) |
-| **Backend** | [Node.js](https://nodejs.org/), [TypeScript](https://www.typescriptlang.org/) |
-| **Database** | [SQLite](https://www.sqlite.org/) (Local), [PostgreSQL](https://www.postgresql.org/) (Cloud) |
-| **IoT** | [MQTT](https://mqtt.org/), [Electron](https://www.electronjs.org/) |
-
----
-
-## 🗺️ Strategic Roadmap
-
-- [x] **Phase 1**: Monorepo Foundation & Workspace Setup
-- [ ] **Phase 2**: Core Device Contracts & UI Primitive Library
-- [ ] **Phase 3**: Backend Infrastructure, Prisma Schema & Auth
-- [ ] **Phase 4**: Electron Desktop Shell with Local Persistence
-- [ ] **Phase 5**: Sync Engine & MQTT Hardware Integration
-- [ ] **Phase 6**: Advanced Analytics & Tenant Billing Modules
+| **Monorepo** | Turborepo, npm workspaces |
+| **Desktop App** | Electron, Vite, React, TypeScript |
+| **UI** | Tailwind CSS, Zustand, React Router |
+| **Local Storage** | better-sqlite3, SQLite |
+| **Platform** | Node.js, TypeScript |
+| **Package Architecture** | Shared types, device core, billing engine |
 
 ---
 
 ## ⚡ Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development environment
 npm run dev
-
-# Build all applications
 npm run build
 ```
 
 ---
 
+## 📌 Resume-ready Highlights
+
+- TypeScript monorepo engineering
+- Electron desktop application development
+- React + Vite frontend architecture
+- Tailwind CSS UI styling
+- Turborepo workspace optimization
+- IoT device abstraction and edge infrastructure
+
 <p align="center">
-  Built with ❤️ by the Pankaj
+  Built for dependable fuel station automation and resilient edge-first experiences.
 </p>
